@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 5 — Billing Engine is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, and idempotent invoice generation. Phase 6 adds payments and invoice actions next.
+**Phase 6 — Payments & Invoice Actions is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, invoice actions, and payments. Phase 7 adds automatic discounts next.
 
 ## Prerequisites
 
@@ -103,6 +103,19 @@ python manage.py run_billing
 ```
 
 Celery Beat also schedules `apps.billing.tasks.run_billing_task` daily. Re-running billing for the same date creates no duplicate invoices; invoice creation and `next_billing_date` advancement are atomic.
+
+## Invoices & Payments API
+
+| Method and path | Purpose | Access |
+|---|---|---|
+| `GET /api/billing/invoices/` | List invoices | Admin/staff; customers see own |
+| `GET /api/billing/invoices/<id>/` | Read an invoice | Admin/staff; customers read own |
+| `POST /api/billing/invoices/<id>/confirm/` | Confirm a draft invoice | Admin/staff |
+| `POST /api/billing/invoices/<id>/cancel/` | Cancel an unpaid invoice | Admin/staff |
+| `POST /api/payments/` | Record a payment against a confirmed invoice | Admin/staff |
+| `GET /api/payments/` | List payments | Admin/staff |
+
+Partial payments are supported. When total payments reach the invoice total, the invoice automatically becomes Paid. Overpayments and payments against draft, paid, or cancelled invoices are rejected.
 
 ## Local development and tests (this machine)
 

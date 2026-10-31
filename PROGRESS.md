@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 5 — Billing Engine & Invoices**
+**Phase 6 — Payments & Invoice Actions**
 
 **Status:** Complete
 
@@ -137,4 +137,23 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 128 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-Phase 6 (payments and invoice actions) is next.
+## Phase 6 implementation
+
+- Invoice list/detail APIs with customer ownership isolation
+- Admin/staff invoice confirmation and cancellation actions through the invoice service
+- Admin/staff payment recording against confirmed invoices only
+- Partial payments supported; overpayment and payment against draft/paid/cancelled invoices rejected
+- Invoice automatically transitions to Paid when payments clear the balance, with audit and outbox atomicity
+- `payment.recorded` outbox event for every payment
+- Staff can list and retrieve payments; customers cannot record or list payments
+- No schema or migration changes
+
+## Phase 6 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Payments and invoice API tests | `python -m pytest apps/payments/tests/test_api.py -q` | 8 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 136 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+PDF generation and payment receipt email are deferred. Phase 7 (discount engine) is next.
