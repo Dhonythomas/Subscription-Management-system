@@ -68,9 +68,9 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 
 | Date | Task | Command | Result |
 |---|---|---|---|
-| 2026-10-31 | Phase 2 full suite (WSL PostgreSQL 16) | `wsl -d Ubuntu -- bash -lc "cd .../phase-2-auth-rbac/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"` | 102 passed |
+| 2026-10-31 | Phase 2 full suite (WSL PostgreSQL 16) | `wsl -d Ubuntu -- bash -lc "cd .../phase-2-auth-rbac/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"` | 103 passed |
 | 2026-10-31 | Phase 2 Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
-| 2026-10-31 | Phase 2 Docker runtime | `docker compose config`; `docker compose up --build -d`; `docker compose run --rm api pytest -q`; `curl http://localhost:8000/health/` | Build and migrations succeeded; 102 tests passed; health returned HTTP 200 `{"status":"ok"}`; containers healthy |
+| 2026-10-31 | Phase 2 Docker runtime | `docker compose config`; `docker compose up --build -d`; `docker compose run --rm api pytest -q`; `curl http://localhost:8000/health/` | Build and migrations succeeded; 103 tests passed; health returned HTTP 200 `{"status":"ok"}`; containers healthy |
 
 ### Earlier attempts (superseded by the successful verification above)
 
