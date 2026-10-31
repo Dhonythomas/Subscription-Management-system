@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "apps.platform.apps.PlatformConfig",
     "apps.accounts.apps.AccountsConfig",
     "apps.catalog.apps.CatalogConfig",
+    "apps.plans.apps.PlansConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
