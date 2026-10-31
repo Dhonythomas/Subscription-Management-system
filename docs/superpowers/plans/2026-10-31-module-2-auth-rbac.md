@@ -151,7 +151,7 @@
 - No schema/migration changes. All auth routes, RBAC behavior, and completion evidence are documented accurately.
 
 - [ ] Run Accounts tests, the full pytest suite, `manage.py check`, and `makemigrations --check --dry-run` against PostgreSQL.
-- [ ] Add final proof assertions for unknown-email login, refresh rotation, admin profile-update denial, exact role-permission behavior, rejection of a special character outside the spec's allowed set, and JWT/refresh rejection after password reset; run Accounts tests.
+- [ ] Add final proof assertions for unknown-email login, refresh rotation, admin profile-update denial, exact role-permission behavior, malformed/expired/wrong-role bearer tokens, rejection of a special character outside the spec's allowed set, JWT/refresh rejection after password reset, and generic response on email-delivery failure; run Accounts tests.
 - [ ] Run Docker Compose build/up, API tests, and `/health/` verification if Docker Engine is available; otherwise report the exact blocker.
 - [ ] Review `git diff --check`, inspect changes, search for secrets/debug prints/TODOs, and verify no `.env` is committed.
 - [ ] Update `PROGRESS.md` with tested Phase 2 status and known limitations.

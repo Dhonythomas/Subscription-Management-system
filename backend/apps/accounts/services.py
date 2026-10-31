@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
@@ -10,6 +12,7 @@ from django.utils.encoding import force_bytes
 from apps.accounts.models import Customer, Role
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -56,10 +59,15 @@ def send_password_reset(*, user):
         f"{settings.PASSWORD_RESET_FRONTEND_URL}?"
         f"{urlencode({'uidb64': uid, 'token': token})}"
     )
-    send_mail(
-        "Password reset",
-        f"Reset your password using this single-use link:\n\n{reset_url}",
-        None,
-        [user.email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            "Password reset",
+            f"Reset your password using this single-use link:\n\n{reset_url}",
+            None,
+            [user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.error("Password reset email delivery failed.")
+        return False
+    return True

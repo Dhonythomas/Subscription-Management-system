@@ -57,7 +57,7 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 - SimpleJWT email/password login and refresh for admin, staff, and customer roles; access tokens last 30 minutes and refresh tokens last one day, with role/email/customer ID claims
 - Public customer signup that atomically creates a customer account and linked profile
 - Django password validation requiring more than eight characters, uppercase, lowercase, and one special character from the approved set
-- Generic, time-limited, single-use password reset email and confirmation endpoints; changing the password invalidates existing access and refresh JWTs
+- Generic, time-limited, single-use password reset email and confirmation endpoints; delivery failures keep the public response generic, and changing the password invalidates existing access and refresh JWTs
 - Admin-only staff creation; staff/customer/unauthenticated callers are denied, and role escalation fields are rejected
 - Authenticated `/me/` profile reads; customers can update only their own billing details
 - Read-only customer list/detail APIs with queryset scoping, 404 on cross-customer ID tampering, and staff/admin visibility
@@ -68,9 +68,9 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 
 | Date | Task | Command | Result |
 |---|---|---|---|
-| 2026-10-31 | Phase 2 full suite (WSL PostgreSQL 16) | `wsl -d Ubuntu -- bash -lc "cd .../phase-2-auth-rbac/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"` | 99 passed |
+| 2026-10-31 | Phase 2 full suite (WSL PostgreSQL 16) | `wsl -d Ubuntu -- bash -lc "cd .../phase-2-auth-rbac/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"` | 102 passed |
 | 2026-10-31 | Phase 2 Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
-| 2026-10-31 | Phase 2 Docker runtime | `docker compose config`; `docker compose up --build -d`; `docker compose run --rm api pytest -q`; `curl http://localhost:8000/health/` | Build and migrations succeeded; 99 tests passed; health returned HTTP 200 `{"status":"ok"}`; containers healthy |
+| 2026-10-31 | Phase 2 Docker runtime | `docker compose config`; `docker compose up --build -d`; `docker compose run --rm api pytest -q`; `curl http://localhost:8000/health/` | Build and migrations succeeded; 102 tests passed; health returned HTTP 200 `{"status":"ok"}`; containers healthy |
 
 ### Earlier attempts (superseded by the successful verification above)
 

@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -10,6 +11,7 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework.test import APIRequestFactory
+from rest_framework_simplejwt.tokens import AccessToken
 
 from apps.accounts import permissions
 from apps.accounts.models import Customer, Role, User
@@ -173,6 +175,22 @@ def test_jwt_bearer_token_authenticates_protected_profile(api_client, staff_user
 
 
 @pytest.mark.django_db
+def test_protected_profile_rejects_missing_malformed_and_expired_jwts(
+    api_client, staff_user
+):
+    missing = api_client.get("/api/accounts/me/")
+    api_client.credentials(HTTP_AUTHORIZATION="Bearer malformed-token")
+    malformed = api_client.get("/api/accounts/me/")
+
+    expired_token = AccessToken.for_user(staff_user)
+    expired_token.set_exp(lifetime=timedelta(seconds=-1))
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {expired_token}")
+    expired = api_client.get("/api/accounts/me/")
+
+    assert missing.status_code == malformed.status_code == expired.status_code == 401
+
+
+@pytest.mark.django_db
 def test_public_registration_creates_customer_and_returns_jwt(api_client):
     response = api_client.post(
         "/api/auth/register/",
@@ -292,6 +310,21 @@ def test_staff_and_customer_cannot_create_staff(
 
     assert response.status_code == 403
     assert not User.objects.filter(email="blocked-staff@example.com").exists()
+
+
+@pytest.mark.django_db
+def test_customer_jwt_cannot_create_staff(api_client, customer_users):
+    user_a, *_ = customer_users
+    authenticate_with_password(api_client, user_a, "CustomerPassword123!")
+
+    response = api_client.post(
+        "/api/accounts/staff/",
+        {"email": "jwt-blocked-staff@example.com", "password": "ValidPassword123!"},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert not User.objects.filter(email="jwt-blocked-staff@example.com").exists()
 
 
 @pytest.mark.django_db
@@ -570,6 +603,33 @@ def test_password_reset_request_does_not_reveal_unknown_email(api_client, custom
     assert known.status_code == unknown.status_code == 200
     assert known.data == unknown.data
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_password_reset_request_stays_generic_if_email_delivery_fails(
+    api_client, customer_users, monkeypatch, caplog
+):
+    user_a, *_ = customer_users
+
+    def fail_delivery(*args, **kwargs):
+        raise ConnectionError("mail server unavailable")
+
+    monkeypatch.setattr("apps.accounts.services.send_mail", fail_delivery)
+    response = api_client.post(
+        "/api/auth/password-reset/", {"email": user_a.email}, format="json"
+    )
+    unknown_response = api_client.post(
+        "/api/auth/password-reset/", {"email": "missing@example.com"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert unknown_response.status_code == 200
+    assert response.data == unknown_response.data
+    assert response.data == {
+        "detail": "If the account exists, a reset email has been sent."
+    }
+    assert user_a.email not in caplog.text
+    assert "Password reset email delivery failed" in caplog.text
 
 
 @pytest.mark.django_db
