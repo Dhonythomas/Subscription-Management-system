@@ -146,6 +146,7 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 - Invoice automatically transitions to Paid when payments clear the balance, with audit and outbox atomicity
 - `payment.recorded` outbox event for every payment
 - Staff can list and retrieve payments; customers cannot record or list payments
+- Invoice PDF download for staff/admin and the owning customer
 - No schema or migration changes
 
 ## Phase 6 verification
@@ -153,7 +154,8 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | Date | Task | Command | Result |
 |---|---|---|---|
 | 2026-10-31 | Payments and invoice API tests | `python -m pytest apps/payments/tests/test_api.py -q` | 8 passed |
-| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 136 passed |
+| 2026-10-31 | Invoice PDF tests | `python -m pytest apps/billing/tests/test_pdf.py -q` | 2 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 138 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-PDF generation and payment receipt email are deferred. Phase 7 (discount engine) is next.
+Payment receipt email remains deferred. Phase 7 (discount engine) is next.

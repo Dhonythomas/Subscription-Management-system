@@ -112,6 +112,7 @@ Celery Beat also schedules `apps.billing.tasks.run_billing_task` daily. Re-runni
 | `GET /api/billing/invoices/<id>/` | Read an invoice | Admin/staff; customers read own |
 | `POST /api/billing/invoices/<id>/confirm/` | Confirm a draft invoice | Admin/staff |
 | `POST /api/billing/invoices/<id>/cancel/` | Cancel an unpaid invoice | Admin/staff |
+| `GET /api/billing/invoices/<id>/pdf/` | Download the invoice PDF | Admin/staff; customers download own |
 | `POST /api/payments/` | Record a payment against a confirmed invoice | Admin/staff |
 | `GET /api/payments/` | List payments | Admin/staff |
 
