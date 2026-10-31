@@ -99,4 +99,6 @@ def apply_transition(
             "occurred_at": None,
         },
     )
+    for field in update_fields:
+        setattr(instance, field, getattr(locked, field))
     return locked

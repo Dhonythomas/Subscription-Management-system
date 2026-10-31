@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "apps.catalog.apps.CatalogConfig",
     "apps.plans.apps.PlansConfig",
     "apps.subscriptions.apps.SubscriptionsConfig",
+    "apps.billing.apps.BillingConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

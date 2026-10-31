@@ -7,6 +7,7 @@ from apps.accounts.models import Customer
 from apps.catalog.models import Product, Tax
 from apps.plans.models import Plan
 from apps.subscriptions.models import Subscription
+from apps.billing.models import Invoice
 
 
 @pytest.fixture
@@ -62,4 +63,21 @@ def subscription(db, customer, plan):
         expiry_date=timezone.now().date(),
         payment_terms="Net 30",
         status=Subscription.Status.DRAFT,
+    )
+
+
+@pytest.fixture
+def invoice(db, subscription, customer):
+    return Invoice.objects.create(
+        number="INV-001",
+        subscription=subscription,
+        customer=customer,
+        period_start=timezone.now().date(),
+        period_end=timezone.now().date(),
+        subtotal=Decimal("500.00"),
+        tax=Decimal("90.00"),
+        discount=Decimal("0.00"),
+        total=Decimal("590.00"),
+        due_date=timezone.now().date(),
+        status=Invoice.Status.DRAFT,
     )
