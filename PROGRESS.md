@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**Phase 1 — Foundation**
+**Phase 2 — Auth & RBAC**
 
-**Status:** Complete
+**Status:** Implementation complete; PostgreSQL verification pending
 
 ## Phase 1 scope decision
 
@@ -50,3 +50,26 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 - Required indexes and `UNIQUE(subscription, period_start, period_end)` on invoices
 - Docker Compose (db, redis, migrate, api, worker, beat), Dockerfile, `.dockerignore`, `.env.example`
 - Tests passing against PostgreSQL 16 in WSL
+
+## Phase 2 implementation
+
+- Token-based email/password login for admin, staff, and customer roles
+- Django password validation requiring more than eight characters, uppercase, lowercase, and special characters
+- Time-limited, single-use password reset using Django's password reset token generator
+- Explicit permissions for login, reset, profile, managed-user, and customer endpoints
+- Admin-only managed user creation; staff and customer roles cannot create users
+- Customer querysets restricted to the authenticated customer; staff and admin can read all customers
+- Optimized customer querysets with `select_related("user")` and paginated list responses
+- Accounts API tests covering all roles, password policy, admin RBAC, reset-token reuse, and customer isolation
+
+## Phase 2 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Phase 2 syntax and Django checks | `python -m compileall -q backend/apps/accounts backend/config`; `python backend/manage.py check` | OK |
+| 2026-10-31 | Migration consistency | `python backend/manage.py makemigrations --check --dry-run` | No changes detected; PostgreSQL connection timed out while checking history |
+| 2026-10-31 | Accounts API tests | `python -m pytest --ds=test_sqlite_settings --nomigrations backend/apps/accounts/tests -q` | 15 passed against temporary SQLite configuration |
+| 2026-10-31 | Full regression attempt | `python -m pytest --ds=test_sqlite_settings --nomigrations -q` | 64 passed, 1 baseline PostgreSQL-trigger test failed because SQLite does not enforce the audit trigger |
+| 2026-10-31 | PostgreSQL test suite | `python -m pytest backend/apps/accounts/tests -q` | Blocked: PostgreSQL connection timed out; Docker daemon unavailable |
+
+Phase 3 remains blocked until Phase 2 is verified against PostgreSQL, committed, and recorded as complete.

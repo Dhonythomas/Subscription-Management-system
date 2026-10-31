@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 1 — Foundation** is complete. The repository now contains the full foundation schema, the custom user model, the platform audit/outbox layer, the subscription and invoice state machines, all required database indexes, the outbox dispatcher, and the Docker Compose runtime.
+**Phase 2 — Auth & RBAC** implementation is complete pending PostgreSQL verification. The repository contains the Phase 1 foundation plus token login, password policy enforcement, password reset, admin-only user management, and customer data isolation APIs.
 
 Later phases add APIs and business workflows on top of this schema freeze.
 
