@@ -1,12 +1,26 @@
+import base64
+import json
 import re
 
 import pytest
+from django.conf import settings
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Customer, Role, User
+
+
+def decode_jwt_claims(token):
+    payload = token.split(".")[1]
+    payload += "=" * (-len(payload) % 4)
+    return json.loads(base64.urlsafe_b64decode(payload))
+
+
+def test_jwt_signing_key_meets_hs256_minimum_length():
+    signing_key = settings.SIMPLE_JWT.get("SIGNING_KEY", settings.SECRET_KEY)
+    assert len(signing_key.encode("utf-8")) >= 32
 
 
 @pytest.fixture
@@ -60,13 +74,17 @@ def test_all_roles_can_log_in(api_client, role):
     )
 
     response = api_client.post(
-        reverse("login"),
+        "/api/auth/login/",
         {"email": user.email, "password": "ValidPassword123!"},
         format="json",
     )
 
     assert response.status_code == 200
-    assert re.fullmatch(r"[0-9a-f]{40}", response.data["token"])
+    assert set(response.data) == {"access", "refresh", "user"}
+    claims = decode_jwt_claims(response.data["access"])
+    assert claims["role"] == role
+    assert claims["email"] == user.email
+    assert claims["customer_id"] is None
     assert response.data["user"]["role"] == role
 
 
@@ -75,12 +93,64 @@ def test_invalid_login_is_rejected(api_client, customer_users):
     user_a, *_ = customer_users
 
     response = api_client.post(
-        reverse("login"),
+        "/api/auth/login/",
         {"email": user_a.email, "password": "wrong-password"},
         format="json",
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_customer_login_includes_customer_id_claim(api_client, customer_users):
+    user_a, _, customer_a, _ = customer_users
+    response = api_client.post(
+        "/api/auth/login/",
+        {"email": user_a.email, "password": "CustomerPassword123!"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    claims = decode_jwt_claims(response.data["access"])
+    assert claims["customer_id"] == customer_a.pk
+    assert response.data["user"]["customer_id"] == customer_a.pk
+
+
+@pytest.mark.django_db
+def test_refresh_returns_access_token_with_same_role_claim(api_client, staff_user):
+    login = api_client.post(
+        "/api/auth/login/",
+        {"email": staff_user.email, "password": "StaffPassword123!"},
+        format="json",
+    )
+    assert login.status_code == 200
+
+    response = api_client.post(
+        "/api/auth/refresh/",
+        {"refresh": login.data["refresh"]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert decode_jwt_claims(response.data["access"])["role"] == Role.STAFF
+
+
+@pytest.mark.django_db
+def test_jwt_bearer_token_authenticates_protected_profile(api_client, staff_user):
+    login = api_client.post(
+        "/api/auth/login/",
+        {"email": staff_user.email, "password": "StaffPassword123!"},
+        format="json",
+    )
+    assert login.status_code == 200
+    api_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {login.data['access']}"
+    )
+
+    response = api_client.get("/api/accounts/me/")
+
+    assert response.status_code == 200
+    assert response.data["email"] == staff_user.email
 
 
 @pytest.mark.django_db

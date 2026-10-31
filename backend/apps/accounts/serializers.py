@@ -1,12 +1,38 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from apps.accounts.models import Customer, Role, User
 
 
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, trim_whitespace=False)
+class RoleTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @staticmethod
+    def customer_id_for(user):
+        if user.role != Role.CUSTOMER:
+            return None
+        return (
+            Customer.objects.filter(user_id=user.pk)
+            .values_list("pk", flat=True)
+            .first()
+        )
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token["role"] = user.role
+        token["email"] = user.email
+        token["customer_id"] = cls.customer_id_for(user)
+        return token
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data["user"] = {
+            "id": self.user.pk,
+            "email": self.user.email,
+            "role": self.user.role,
+            "customer_id": self.customer_id_for(self.user),
+        }
+        return data
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

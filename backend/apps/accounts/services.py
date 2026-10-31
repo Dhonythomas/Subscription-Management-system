@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import transaction
@@ -8,10 +8,6 @@ from django.utils.encoding import force_bytes
 from apps.accounts.models import Role
 
 User = get_user_model()
-
-
-def authenticate_user(*, email, password):
-    return authenticate(username=email, password=password)
 
 
 @transaction.atomic

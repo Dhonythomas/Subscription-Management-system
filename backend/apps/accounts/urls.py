@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import (
     CustomerViewSet,
-    LoginView,
     ManagedUserViewSet,
     MeView,
     PasswordResetConfirmView,
@@ -15,7 +14,6 @@ router.register("users", ManagedUserViewSet, basename="managed-user")
 router.register("customers", CustomerViewSet, basename="customer")
 
 urlpatterns = [
-    path("login/", LoginView.as_view(), name="login"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="password-reset"),
     path(
         "password-reset/confirm/",
