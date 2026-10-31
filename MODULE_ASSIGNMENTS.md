@@ -248,3 +248,16 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 - The PDF `Subscription_System_Design_Plan.pdf` could not be machine-read in this session. Confirm that `docs/design.md` exists and matches `AGENT.md`. If code and design disagree, stop and ask per `AGENT.md`.
 - All workspace source files are currently 0 bytes (greenfield scaffold). No existing code to preserve.
 - Tests must be written alongside code, not afterwards (Rule 11).
+
+
+
+Member 1: platform  ← STARTS FIRST (blocks all others)
+            │
+    ┌───────┴───────┐
+Member 2: accounts   Member 3: catalog + plans   (INDEPENDENT, parallel)
+            │               │
+    └───────┴───────────────┘
+            │
+Member 4: subscriptions  ← waits for Member 2 + Member 3
+            │
+    billing → payments → discounts → reports  (sequential, assign as members free up)
