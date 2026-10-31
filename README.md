@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 3 — Catalog & Plans is complete.** The backend provides JWT authentication and RBAC, catalog and plan management, customer profiles, and the foundation for subscriptions and billing. Phase 4 adds quotation and subscription workflows next.
+**Phase 4 — Quotations & Subscriptions is complete.** The backend provides JWT auth and RBAC, catalog and plan management, customer profiles, quotation templates, and the full subscription lifecycle. Phase 5 adds the billing engine next.
 
 ## Prerequisites
 
@@ -77,6 +77,22 @@ Successful password reset invalidates the user's existing access and refresh tok
 | `/api/plans/` | List, create, read, update, delete plans | Admin writes; staff reads |
 
 All list endpoints are paginated. Customers cannot access catalog or plan endpoints.
+
+## Subscriptions API
+
+| Method and path | Purpose | Access |
+|---|---|---|
+| `/api/subscriptions/templates/` | Manage quotation templates | Admin/staff |
+| `/api/subscriptions/` | List and create subscriptions | Admin/staff create; customers see own |
+| `/api/subscriptions/<id>/` | Read or update a subscription | Admin/staff; customers read own |
+| `POST /api/subscriptions/<id>/quotation/` | Move Draft → Quotation | Admin/staff |
+| `POST /api/subscriptions/<id>/confirm/` | Move Quotation → Confirmed | Admin/staff |
+| `POST /api/subscriptions/<id>/activate/` | Move Confirmed/Paused/Closed → Active | Admin/staff |
+| `POST /api/subscriptions/<id>/pause/` | Move Active → Paused | Admin/staff |
+| `POST /api/subscriptions/<id>/close/` | Move Active → Closed | Admin/staff |
+| `POST /api/subscriptions/<id>/renew/` | Move Closed → Active | Admin/staff |
+
+Status is read-only; lifecycle changes only happen through the action endpoints and are audited.
 
 ## Local development and tests (this machine)
 

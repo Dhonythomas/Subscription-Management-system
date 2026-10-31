@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 3 — Catalog, Variants, Taxes & Plans**
+**Phase 4 — Quotations & Subscription Lifecycle**
 
 **Status:** Complete
 
@@ -99,4 +99,22 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 115 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-Phase 4 (quotation templates and subscription APIs) is next.
+## Phase 4 implementation
+
+- Quotation template APIs for admin and staff
+- Subscription APIs with nested line creation and editing while draft or quotation
+- Lifecycle actions for quotation, confirmation, activation, pause, close, and renewal
+- All status changes use the existing transition service and preserve audit/outbox atomicity
+- Customers can list and read only their own subscriptions; only admin/staff can create or act
+- Validation for subscription dates, active plans, positive quantities, non-negative amounts, and variant/product consistency
+- No schema or migration changes
+
+## Phase 4 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Phase 4 API tests | `python -m pytest apps/subscriptions/tests/test_api.py -q` | 8 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 123 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+Phase 5 (billing engine and invoices) is next.
