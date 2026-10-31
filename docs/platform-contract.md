@@ -80,7 +80,7 @@ apply_transition(
 4. Runs `validate(locked_instance)` if supplied; a raised `InvalidTransition` aborts before any write.
 5. Saves the new status and any `extra_update_fields`.
 6. Writes `AuditLog` and `OutboxEvent` in the same transaction.
-7. Returns the locked, updated instance.
+7. Copies updated fields back to the passed-in instance and returns the locked, updated instance.
 
 Module services must wrap this helper and own their business rules. Views and serializers never assign `status` directly.
 
