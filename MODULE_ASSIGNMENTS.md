@@ -27,13 +27,13 @@
 ## Phase Dependency Map (build order — one phase at a time per RULES.md Rule 2)
 
 ```
-Phase 1: Schema + state machine services  →  platform, subscriptions (foundation)
-Phase 2: Auth + roles                     →  accounts (depends on platform)
-Phase 3: Catalog + plans                  →  catalog, plans (depends on platform)
-Phase 4: Quotations + subscriptions       →  subscriptions (depends on catalog, plans, accounts)
-Phase 5: Billing engine + scheduler       →  billing (depends on subscriptions)
-Phase 6: Payments                         →  payments (depends on billing)
-Phase 7: Discounts                        →  discounts (depends on billing)
+Phase 1: Foundation schema (all modules) + platform + state machines  →  platform (Tech Lead)
+Phase 2: Auth + roles                     →  accounts (depends on Phase 1 schema)
+Phase 3: Catalog + plans APIs             →  catalog, plans (depends on Phase 1 schema)
+Phase 4: Quotations + subscriptions flow  →  subscriptions (depends on Phase 1 schema)
+Phase 5: Billing engine + scheduler       →  billing (depends on Phase 1 schema and subscriptions)
+Phase 6: Payments + invoice actions       →  payments (depends on Phase 1 schema and billing)
+Phase 7: Discounts engine                 →  discounts (depends on Phase 1 schema and billing)
 Phase 8: Dashboard + read model           →  reports (depends on billing, payments, discounts)
 Phase 9: Seed data + README + demo        →  all (integration)
 Phase 10: Optional extras                 →  after phases 1-9 complete
@@ -45,85 +45,91 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 
 ## Module-Wise Task Assignments (Independent Team Members)
 
-### Module 1: `platform` — Shared Foundation (Phase 1)
+### Module 1: `platform` + Foundation Schema (Phase 1)
 **Owner:** 1 developer (Tech Lead) — **Must be done first; blocks all other modules**
 
 **Tasks:**
-- Set up Django 5 + DRF project with PostgreSQL, Redis, Celery, Docker Compose
-- Base models: `AuditLog`, `OutboxEvent`, abstract timestamped/soft-delete base
-- Required indexes: `subscriptions(status, next_billing_date)`, `invoices(status, due_date)`, `invoices(customer)`, `payments(invoice, paid_on)`
-- Outbox pattern: event publishing in same transaction as state change
+- Set up Django 5 + DRF project with PostgreSQL 16, Redis 7, Celery, and Docker Compose
+- Create the full foundation schema in Phase 1: custom user and roles, customers, products/variants/taxes, plans, subscriptions/lines, invoices/lines, payments, discounts/usage, daily metrics
+- Create the custom user model before the first migration (`AUTH_USER_MODEL = "accounts.User"`)
+- Base models: `TimeStampedModel`, `SoftDeleteModel`, `AuditLog`, `OutboxEvent`
+- Platform services: `record_audit`, `emit_event`, `apply_transition`, money quantization, and the outbox dispatcher
+- Subscription and invoice state-machine services with a single allowed-transitions table; illegal transitions rejected
+- Required indexes: `subscriptions(status, next_billing_date)`, `invoices(status, due_date)`, `invoices(customer)`, `payments(invoice, paid_on)`, `plans(period)`
+- Outbox pattern: event publishing in the same transaction as the state change
+- Append-only audit enforcement at both model and PostgreSQL trigger level
 - `docker compose up` must start the full system from a clean checkout
 - `.env.example` committed; no secrets in repo
 
-**Definition of Done:** Migrations run; `docker compose up` starts clean; outbox + audit pattern verified with tests.
+**Definition of Done:** Migrations run; `docker compose up` starts clean when Docker is available; outbox and audit atomicity tests pass; illegal subscription and invoice transitions are rejected; all required indexes exist. Phase 1 stops at schema, platform infrastructure, and state-machine services: no business API endpoints are built early.
 
 ---
 
 ### Module 2: `accounts` — Auth & RBAC (Phase 2)
-**Owner:** 1 developer (independent once `platform` exists)
+**Owner:** 1 developer (independent once Phase 1 foundation exists)
 
 **Tasks:**
-- Custom user model with `role` field (`admin`, `staff`, `customer`)
-- Email unique; password rules (>8 chars, uppercase, lowercase, special char); Django default hashers
-- Login for all three roles
+- Use the custom user, `Role`, and `Customer` models created by the Phase 1 schema freeze
+- Build email/password login for `admin`, `staff`, and `customer` roles; email remains unique
+- Enforce password rules (>8 chars, uppercase, lowercase, special char) with Django default hashers
 - Password reset: time-limited, single-use tokens
 - Explicit permission class on every endpoint (no open endpoints)
 - Only `admin` creates staff, discounts, products, plans, taxes
 - Customer querysets filtered by logged-in customer (ID tampering → 404/empty)
 - Permission tests: customer-A-reads-customer-B attempt
 
-**Definition of Done:** Three roles log in; permissions enforced; all permission tests pass.
+**Definition of Done:** Three roles log in; permissions enforced; all permission tests pass. Phase 2 adds auth APIs and permissions on top of the Phase 1 schema; it does not recreate the user schema.
 
 ---
 
 ### Module 3: `catalog` — Products, Variants, Taxes (Phase 3)
-**Owner:** 1 developer (independent once `platform` exists)
+**Owner:** 1 developer (independent once Phase 1 foundation exists)
 
 **Tasks:**
-- Product model, variants, tax rates
-- Money: `DecimalField(max_digits=12, decimal_places=2)` only; no floats anywhere
-- Admin can create/edit products, variants, taxes
-- API endpoints paginated; `select_related`/`prefetch_related` to avoid N+1
+- Use the `Product`, `Variant`, and `Tax` models and indexes created by the Phase 1 schema freeze
+- Build the admin CRUD APIs for products, variants, and tax rates
+- Keep all money as `DecimalField(max_digits=12, decimal_places=2)`; no floats anywhere
+- Paginate every list endpoint; use `select_related`/`prefetch_related` to avoid N+1
 - Query-count tests on key endpoints
 
-**Definition of Done:** Admin can launch a product with variants and taxes; tests pass.
+**Definition of Done:** Admin can launch a product with variants and taxes; tests pass. Phase 3 adds APIs and services; it does not rewrite the catalog schema.
 
 ---
 
 ### Module 4: `plans` — Subscription Plans (Phase 3)
-**Owner:** 1 developer (independent once `platform` exists; can pair with `catalog`)
+**Owner:** 1 developer (independent once Phase 1 foundation exists; can pair with `catalog`)
 
 **Tasks:**
-- Plan model linked to product, billing interval, price, feature flags
-- Admin can launch a plan with flags
-- Money as `DecimalField(max_digits=12, decimal_places=2)`
+- Use the `Plan` model (product link, billing interval, price, feature flags, `period` index) created by the Phase 1 schema freeze
+- Build the admin plan APIs and validation for flags
+- Keep money as `DecimalField(max_digits=12, decimal_places=2)`
 - Pagination and query optimization
 
-**Definition of Done:** Admin can create a plan; tests pass.
+**Definition of Done:** Admin can create a plan; tests pass. Phase 3 adds APIs and services; it does not rewrite the plans schema.
 
 ---
 
 ### Module 5: `subscriptions` — Quotations + Subscription Lifecycle (Phase 4)
-**Owner:** 1–2 developers (depends on `accounts`, `catalog`, `plans`)
+**Owner:** 1–2 developers (depends on the Phase 1 schema; pairs with `accounts`, `catalog`, `plans`)
 
 **Tasks:**
-- Quotation template model; quote → Active subscription flow
-- Subscription state machine with allowed-transitions table
+- Build the quotation template and quote → Active subscription business flow and APIs on top of the Phase 1 `QuotationTemplate`, `Subscription`, `SubscriptionLine`, and state-machine foundation
+- Use the Phase 1 subscription state machine; do not duplicate its schema or its allowed-transitions table
 - Status changes **only** through service functions (never `obj.status = ...` save)
 - Every transition writes `AuditLog` + `OutboxEvent` in the same transaction
-- API exposes actions (confirm, cancel, pause, close); never accepts raw `status` field
+- API exposes actions (confirm, cancel, pause, close, renew); never accepts a raw `status` field
 - Illegal transitions rejected in tests
 - Audit trail on all state changes
 
-**Definition of Done:** Quote to Active flow works; illegal transitions rejected; audit trail verified.
+**Definition of Done:** Quote to Active flow works; illegal transitions rejected; audit trail verified. Phase 4 adds the quotation/subscription business flow and APIs on top of the Phase 1 schema and state-machine foundation, not a duplicate schema.
 
 ---
 
 ### Module 6: `billing` — Billing Engine + Invoices (Phase 5)
-**Owner:** 1–2 developers (depends on `subscriptions`)
+**Owner:** 1–2 developers (depends on Phase 1 schema and `subscriptions`)
 
 **Tasks:**
+- Build the billing engine on the Phase 1 `Invoice` and `InvoiceLine` schema and invoice state machine
 - Billing engine runs in separate Celery worker + beat process
 - Invoice generation: `UNIQUE(subscription, period_start, period_end)` constraint (never drop/weaken)
 - `select_for_update` row lock inside transaction
@@ -132,45 +138,48 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 - Idempotency: running billing job twice = zero duplicates, zero skipped
 - Test proving double-run idempotency
 
-**Definition of Done:** Invoices fully prefilled; double-run creates no duplicates; test passes.
+**Definition of Done:** Invoices fully prefilled; double-run creates no duplicates; test passes. Phase 5 adds the billing engine; it does not rewrite the invoice schema.
 
 ---
 
 ### Module 7: `payments` — Payments + Invoice Actions (Phase 6)
-**Owner:** 1 developer (depends on `billing`)
+**Owner:** 1 developer (depends on Phase 1 schema and `billing`)
 
 **Tasks:**
+- Use the Phase 1 `Payment` schema and `(invoice, paid_on)` index
 - Record payment against an invoice
-- Invoice auto-transitions to Paid when balance cleared
+- Invoice auto-transitions to Paid when balance cleared, through the invoice service
 - PDF generation and email send on payment/invoice events
-- Payment model with index on `(invoice, paid_on)`
+- Keep payment amounts as `Decimal`
 
-**Definition of Done:** Payment recorded; invoice auto-Paid; PDF + email verified.
+**Definition of Done:** Payment recorded; invoice auto-Paid; PDF + email verified. Phase 6 adds payment APIs and services; it does not rewrite the payment schema.
 
 ---
 
 ### Module 8: `discounts` — Discounts (Phase 7)
-**Owner:** 1 developer (depends on `billing`)
+**Owner:** 1 developer (depends on Phase 1 schema and `billing`)
 
 **Tasks:**
-- Discount model; auto-applied on next invoice
-- Stops at expiry date or usage limit
+- Use the Phase 1 `Discount` and `DiscountUsage` schema
+- Apply eligible discounts automatically on the next invoice
+- Stop at expiry date or usage limit
 - Usage limit respected under repeat billing runs (test required)
 
-**Definition of Done:** Discounts auto-apply; expiry/limit enforced; test passes.
+**Definition of Done:** Discounts auto-apply; expiry/limit enforced; test passes. Phase 7 adds the discount engine; it does not rewrite the discount schema.
 
 ---
 
 ### Module 9: `reports` — Dashboard + Read Model (Phase 8)
-**Owner:** 1 developer (depends on `billing`, `payments`, `discounts`)
+**Owner:** 1 developer (depends on Phase 1 schema, `billing`, `payments`, `discounts`)
 
 **Tasks:**
-- Admin/staff panel, customer portal, finance dashboard read models
+- Use the Phase 1 `DailyMetrics` schema and aggregates
+- Build admin/staff panel, customer portal, and finance dashboard read models
 - All pages under 2s on 10k seeded subscriptions
-- Revenue reporting
+- Revenue reporting, including MRR and ARR
 - Paginated list endpoints
 
-**Definition of Done:** Dashboard pages load under 2s with 10k subscriptions; tests pass.
+**Definition of Done:** Dashboard pages load under 2s with 10k subscriptions; tests pass. Phase 8 adds read APIs and aggregation services; it does not rewrite the metrics schema.
 
 ---
 
@@ -201,7 +210,7 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 
 | Member | Primary Modules | Phases |
 |--------|----------------|--------|
-| Member 1 (Tech Lead) | `platform` + integration | 1, 9 |
+| Member 1 (Tech Lead) | `platform` + foundation + integration | 1, 9 |
 | Member 2 | `accounts` | 2 |
 | Member 3 | `catalog` + `plans` | 3 |
 | Member 4 | `subscriptions` | 4 |
@@ -235,7 +244,7 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 | 9 | DB discipline | Required indexes; paginated list endpoints; avoid N+1; overdue is derived, never stored |
 | 10 | Module boundaries | Each module owns its tables; others call service functions or listen to events |
 | 11 | Tests mandatory | No feature complete without tests; illegal transitions, billing idempotency, discount limits, customer isolation, password rules all require proof tests |
-| 12 | No fakes | No hardcoded data, mocks, or placeholder logic presented as real; remove TODOs/FIXMEs |
+| 12 | No fakes | No hardcoded data, mocks, or placeholder logic presented as real; remove unfinished-task markers |
 | 13 | Scope control | Main features first; extras (n8n, payment gateway, proration) only after phases 1–9 |
 | 14 | Docker must work | `docker compose up` starts full system from clean checkout; README kept accurate |
 | 15 | Git hygiene | Commit after every working step; never commit broken code to main; never commit `.env`/secrets |
@@ -245,13 +254,12 @@ Phase 10: Optional extras                 →  after phases 1-9 complete
 
 ## Notes
 
-- The PDF `Subscription_System_Design_Plan.pdf` could not be machine-read in this session. Confirm that `docs/design.md` exists and matches `AGENT.md`. If code and design disagree, stop and ask per `AGENT.md`.
-- All workspace source files are currently 0 bytes (greenfield scaffold). No existing code to preserve.
+- `docs/design.md` is the source of truth and matches `AGENT.md`. If code and design disagree, stop and ask per `AGENT.md`.
+- Phase 1 is the schema freeze. Every module's core models, constraints, and indexes are created there; later phases add APIs, business services, and new migrations without rewriting the foundation.
 - Tests must be written alongside code, not afterwards (Rule 11).
+- The zero-byte scaffold placeholders were removed in Phase 1 because they conflicted with the Django stack.
 
-
-
-Member 1: platform  ← STARTS FIRST (blocks all others)
+Member 1: platform + foundation schema  ← STARTS FIRST (blocks all others)
             │
     ┌───────┴───────┐
 Member 2: accounts   Member 3: catalog + plans   (INDEPENDENT, parallel)
