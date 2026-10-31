@@ -102,3 +102,9 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-outbox": {
+        "task": "apps.platform.tasks.dispatch_outbox_task",
+        "schedule": 10.0,
+    },
+}
