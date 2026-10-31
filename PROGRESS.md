@@ -4,7 +4,7 @@
 
 **Phase 2 — Auth, Roles & RBAC**
 
-**Status:** Implementation complete; PostgreSQL verification pending
+**Status:** Complete
 
 ## Phase 1 scope decision
 
