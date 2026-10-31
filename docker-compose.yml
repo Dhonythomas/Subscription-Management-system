@@ -78,6 +78,17 @@ services:
       timeout: 5s
       retries: 10
 
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
   worker:
     build: ./backend
     command: celery -A config worker -l info

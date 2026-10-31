@@ -7,13 +7,14 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 ## Stack
 
 - Django 5 + Django REST Framework
+- React 18 + Vite
 - PostgreSQL 16
 - Redis 7 + Celery worker and beat
 - Docker Compose
 
 ## Current status
 
-**Backend phases 1–9 are complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, discounts, finance reporting, and demo seed data. The React frontend (Module 10) is not built yet.
+**Backend phases 1–9 and the React frontend are complete.** The app provides JWT auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, discounts, finance reporting, demo seed data, and role-based admin, staff, and customer screens.
 
 ## Demo
 
@@ -56,20 +57,24 @@ Demo flow:
    ```bash
    docker compose up --build
    ```
-3. Check the health endpoint:
+3. Open the app at:
+   ```text
+   http://localhost:5173
+   ```
+4. Check the backend health endpoint:
    ```bash
    curl http://localhost:8000/health/
    ```
    Expected response: `{"status": "ok"}`
-4. Create the initial admin account:
+5. Load demo data:
    ```bash
-   docker compose run --rm api python manage.py createsuperuser
+   docker compose run --rm api python manage.py seed_demo
    ```
-5. Run the test suite inside the API container:
+6. Run the backend test suite inside the API container:
    ```bash
    docker compose run --rm api pytest
    ```
-6. Stop and clean up:
+7. Stop and clean up:
    ```bash
    docker compose down -v
    ```
@@ -156,6 +161,22 @@ Refresh metrics with `python manage.py refresh_metrics`; Celery Beat also refres
 ## Discounts
 
 Discounts are applied automatically when invoices are generated. Fixed and percentage discounts can target the whole subscription or selected products, with start/end dates, minimum amount or quantity, and usage limits. Applied discounts are recorded in `discount_usage`; repeat billing runs cannot exceed the limit.
+
+## Frontend development
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite serves the app on `http://localhost:5173` and proxies `/api` and `/health` to `http://127.0.0.1:8000`. Production build:
+
+```bash
+npm run build
+```
+
+The frontend includes login/registration, role-based navigation, finance overview, catalog and plan views, subscription lifecycle actions, invoices with PDF download, payment recording, and the customer profile screen. Backend RBAC remains authoritative.
 
 ## Local development and tests (this machine)
 

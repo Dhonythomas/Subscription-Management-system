@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**Phase 9 — Demo Data & Handoff**
+**Phase 10 — React Frontend**
 
-**Status:** Complete (backend)
+**Status:** Complete
 
 ## Phase 1 scope decision
 
@@ -210,4 +210,23 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 148 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-The 10k-subscription performance benchmark was not run. Payment receipt email remains deferred. Frontend (Module 10) is not built.
+The 10k-subscription performance benchmark was not run. Payment receipt email remains deferred.
+
+## Phase 10 implementation
+
+- React 18 + Vite frontend with role-based navigation for admin, staff, and customers
+- Login and public customer registration
+- Finance overview, catalog, plans, subscriptions, invoices, payments, and profile screens
+- Subscription lifecycle actions and invoice PDF downloads wired to the backend
+- Vite proxy for `/api` and `/health`; Docker Compose frontend service on port 5173
+- Responsive layout and customer-scoped screens
+
+## Phase 10 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Frontend production build | `npm run build` | Built successfully (45 modules) |
+| 2026-10-31 | Docker frontend runtime | `docker compose up --build -d`; `curl http://localhost:5173/`; `curl http://localhost:5173/health/` | HTTP 200; proxy returned `{"status":"ok"}` |
+| 2026-10-31 | Frontend-to-API login | Admin login through `http://localhost:5173/api/auth/login/`; authenticated dashboard request | Login succeeded; dashboard returned MRR `500.00`, active subscriptions `1` |
+
+No browser automation suite was added; verification covered the production build, Docker runtime, and proxied auth/data requests.
