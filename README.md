@@ -13,7 +13,33 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 8 — Finance Dashboard is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, discounts, and the finance reporting read model. Phase 9 adds seed data and demo readiness.
+**Backend phases 1–9 are complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, discounts, finance reporting, and demo seed data. The React frontend (Module 10) is not built yet.
+
+## Demo
+
+After migrations:
+
+```bash
+docker compose run --rm api python manage.py seed_demo
+```
+
+Demo logins:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@example.com` | `DemoPassword123!` |
+| Staff | `staff@example.com` | `DemoPassword123!` |
+| Customer | `customer@example.com` | `DemoPassword123!` |
+
+Set `DEMO_PASSWORD` to override the demo password. The seed is safe to rerun and creates an active subscription with a paid invoice and refreshed finance metrics.
+
+Demo flow:
+
+1. Log in as admin; list products, plans, and discounts.
+2. Log in as staff; list the active subscription and its paid invoice.
+3. Download the invoice PDF from `/api/billing/invoices/<id>/pdf/`.
+4. Open the finance dashboard at `/api/reports/dashboard/`.
+5. Run `python manage.py run_billing` twice; the second run creates no duplicates.
 
 ## Prerequisites
 

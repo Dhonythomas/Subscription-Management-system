@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**Phase 8 — Finance Dashboard & Reports**
+**Phase 9 — Demo Data & Handoff**
 
-**Status:** Complete
+**Status:** Complete (backend)
 
 ## Phase 1 scope decision
 
@@ -195,4 +195,19 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 147 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-The 10k-subscription performance benchmark was not run. Payment receipt email remains deferred. Phase 9 (seed data, README, demo) is next.
+## Phase 9 implementation
+
+- Idempotent `seed_demo` management command creating admin, staff, customer, product, variant, tax, plan, quotation template, discount, active subscription, paid invoice, and daily metrics
+- Demo login credentials documented; password overridable with `DEMO_PASSWORD`
+- README demo flow and API documentation kept current
+- Backend phases 1–9 complete
+
+## Phase 9 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Demo seed test | `python -m pytest apps/platform/tests/test_seed_demo.py -q` | 1 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 148 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+The 10k-subscription performance benchmark was not run. Payment receipt email remains deferred. Frontend (Module 10) is not built.
