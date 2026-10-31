@@ -10,19 +10,19 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.accounts.models import Customer, Role
-from apps.accounts.permissions import IsAdminOrStaffRole, IsAdminRole
+from apps.accounts.permissions import IsAdmin, IsStaffOrAdmin
 from apps.accounts.serializers import (
     CustomerSerializer,
     CustomerRegistrationSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RoleTokenObtainPairSerializer,
-    UserCreateSerializer,
+    StaffCreateSerializer,
     UserSerializer,
 )
 from apps.accounts.services import (
     create_customer_account,
-    create_managed_user,
+    create_staff_account,
     send_password_reset,
 )
 User = get_user_model()
@@ -106,19 +106,14 @@ class MeView(APIView):
         return Response(UserSerializer(request.user).data)
 
 
-class ManagedUserViewSet(ModelViewSet):
-    permission_classes = (IsAdminRole,)
-    serializer_class = UserSerializer
-    queryset = User.objects.order_by("id")
+class StaffCreateView(APIView):
+    permission_classes = (IsAdmin,)
 
-    def get_serializer_class(self):
-        if self.action == "create":
-            return UserCreateSerializer
-        return super().get_serializer_class()
-
-    def perform_create(self, serializer):
-        user = create_managed_user(**serializer.validated_data)
-        serializer.instance = user
+    def post(self, request):
+        serializer = StaffCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = create_staff_account(**serializer.validated_data)
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class CustomerViewSet(ModelViewSet):
@@ -134,4 +129,4 @@ class CustomerViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in {"list", "retrieve"}:
             return [IsAuthenticated()]
-        return [IsAdminOrStaffRole()]
+        return [IsStaffOrAdmin()]

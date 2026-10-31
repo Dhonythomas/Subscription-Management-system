@@ -32,14 +32,12 @@ def create_customer_account(
 
 
 @transaction.atomic
-def create_managed_user(*, email, password, role, is_active=True):
-    is_staff = role == Role.STAFF
+def create_staff_account(*, email, password):
     return User.objects.create_user(
         email=email,
         password=password,
-        role=role,
-        is_staff=is_staff,
-        is_active=is_active,
+        role=Role.STAFF,
+        is_staff=True,
     )
 
 

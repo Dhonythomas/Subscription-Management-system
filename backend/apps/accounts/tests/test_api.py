@@ -238,35 +238,53 @@ def test_registration_rejects_privileged_role_fields(api_client):
 
 
 @pytest.mark.django_db
-def test_only_admin_can_create_managed_users(api_client, admin_user, staff_user):
-    api_client.force_authenticate(user=staff_user)
-    forbidden = api_client.post(
-        reverse("managed-user-list"),
-        {
-            "email": "new@example.com",
-            "password": "ValidPassword123!",
-            "role": Role.CUSTOMER,
-        },
-        format="json",
-    )
-    assert forbidden.status_code == 403
-
+def test_admin_can_create_staff_account(api_client, admin_user):
     api_client.force_authenticate(user=admin_user)
-    created = api_client.post(
-        reverse("managed-user-list"),
+    response = api_client.post(
+        "/api/accounts/staff/",
         {
-            "email": "new@example.com",
+            "email": "new-staff@example.com",
             "password": "ValidPassword123!",
-            "role": Role.STAFF,
         },
         format="json",
     )
 
-    assert created.status_code == 201
-    new_user = User.objects.get(email="new@example.com")
+    assert response.status_code == 201
+    new_user = User.objects.get(email="new-staff@example.com")
     assert new_user.role == Role.STAFF
     assert new_user.is_staff is True
+    assert new_user.is_active is True
     assert new_user.check_password("ValidPassword123!")
+    assert response.data["role"] == Role.STAFF
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("role", [Role.STAFF, Role.CUSTOMER])
+def test_staff_and_customer_cannot_create_staff(
+    api_client, role, staff_user, customer_users
+):
+    user = staff_user if role == Role.STAFF else customer_users[0]
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/api/accounts/staff/",
+        {"email": "blocked-staff@example.com", "password": "ValidPassword123!"},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert not User.objects.filter(email="blocked-staff@example.com").exists()
+
+
+@pytest.mark.django_db
+def test_unauthenticated_cannot_create_staff(api_client):
+    response = api_client.post(
+        "/api/accounts/staff/",
+        {"email": "anonymous-staff@example.com", "password": "ValidPassword123!"},
+        format="json",
+    )
+
+    assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -274,17 +292,37 @@ def test_only_admin_can_create_managed_users(api_client, admin_user, staff_user)
     "password",
     ["shortA!", "alllowercase1!", "ALLUPPERCASE1!", "NoSpecial123"],
 )
-def test_password_policy_is_enforced(api_client, admin_user, password):
+def test_staff_creation_enforces_password_policy(api_client, admin_user, password):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
-        reverse("managed-user-list"),
-        {"email": "invalid@example.com", "password": password, "role": Role.CUSTOMER},
+        "/api/accounts/staff/",
+        {"email": "invalid-staff@example.com", "password": password},
         format="json",
     )
 
     assert response.status_code == 400
     assert "password" in response.data
+
+
+@pytest.mark.django_db
+def test_staff_creation_rejects_privileged_field_injection(api_client, admin_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        "/api/accounts/staff/",
+        {
+            "email": "injected-staff@example.com",
+            "password": "ValidPassword123!",
+            "role": Role.ADMIN,
+            "is_staff": False,
+            "is_superuser": True,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not User.objects.filter(email="injected-staff@example.com").exists()
 
 
 @pytest.mark.django_db

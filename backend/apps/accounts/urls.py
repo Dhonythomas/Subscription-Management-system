@@ -3,15 +3,15 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import (
     CustomerViewSet,
-    ManagedUserViewSet,
     MeView,
+    StaffCreateView,
 )
 
 router = DefaultRouter()
-router.register("users", ManagedUserViewSet, basename="managed-user")
 router.register("customers", CustomerViewSet, basename="customer")
 
 urlpatterns = [
     path("me/", MeView.as_view(), name="me"),
+    path("staff/", StaffCreateView.as_view(), name="staff-create"),
     path("", include(router.urls)),
 ]

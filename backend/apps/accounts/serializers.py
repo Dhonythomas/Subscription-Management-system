@@ -95,26 +95,33 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "date_joined")
 
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class StaffCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
     class Meta:
         model = User
-        fields = ("id", "email", "password", "role", "is_active")
-        read_only_fields = ("id",)
+        fields = ("email", "password")
 
-    def validate_role(self, value):
-        if value == Role.ADMIN:
-            raise serializers.ValidationError("Admin users cannot be created through this endpoint.")
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
         return value
 
     def validate_password(self, value):
         validate_password(value)
         return value
 
-    def create(self, validated_data):
-        password = validated_data.pop("password")
-        return User.objects.create_user(password=password, **validated_data)
+    def validate(self, attrs):
+        privileged_fields = {"role", "is_staff", "is_superuser", "is_active"}
+        supplied = privileged_fields.intersection(self.initial_data)
+        if supplied:
+            raise serializers.ValidationError(
+                {
+                    field: "This field is not accepted when creating staff."
+                    for field in sorted(supplied)
+                }
+            )
+        return attrs
 
 
 class CustomerSerializer(serializers.ModelSerializer):
