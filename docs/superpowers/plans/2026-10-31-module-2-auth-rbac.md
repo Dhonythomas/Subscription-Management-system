@@ -105,8 +105,9 @@
 - Test: `backend/apps/accounts/tests/test_api.py`
 
 **Interfaces:**
-- Produce `POST /api/accounts/staff/`, requiring `IsAdminRole`, accepting only email/password, and always creating an active `Role.STAFF` user with `is_staff=True`.
-- Reuse the shared role-aware permission classes; no public or customer path can create elevated accounts.
+- Produce `POST /api/accounts/staff/`, requiring `IsAdmin`, accepting only email/password, and always creating an active `Role.STAFF` user with `is_staff=True`.
+- Produce role permission classes `IsAdmin`, `IsStaff`, `IsCustomer`, and `IsStaffOrAdmin`; Task 5 adds `IsCustomerOwnerOrStaffAdmin`.
+- No public or customer path can create elevated accounts.
 
 - [ ] Write tests proving admin success, staff/customer/anonymous denial, invalid password rejection, and resistance to role/is_superuser field injection.
 - [ ] Run focused tests and confirm required route/permission cases fail.
