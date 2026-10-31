@@ -13,6 +13,7 @@ from apps.accounts.models import Customer, Role
 from apps.accounts.permissions import IsAdminOrStaffRole, IsAdminRole
 from apps.accounts.serializers import (
     CustomerSerializer,
+    CustomerRegistrationSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RoleTokenObtainPairSerializer,
@@ -20,6 +21,7 @@ from apps.accounts.serializers import (
     UserSerializer,
 )
 from apps.accounts.services import (
+    create_customer_account,
     create_managed_user,
     send_password_reset,
 )
@@ -35,6 +37,19 @@ class RoleTokenObtainPairView(TokenObtainPairView):
 class PublicTokenRefreshView(TokenRefreshView):
     permission_classes = (AllowAny,)
     authentication_classes = ()
+
+
+class CustomerRegistrationView(APIView):
+    permission_classes = (AllowAny,)
+    authentication_classes = ()
+
+    def post(self, request):
+        serializer = CustomerRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = create_customer_account(**serializer.validated_data)
+        response_data = RoleTokenObtainPairSerializer.token_response_for(user)
+        response_data["customer"] = CustomerSerializer(user.customer).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class PasswordResetRequestView(APIView):

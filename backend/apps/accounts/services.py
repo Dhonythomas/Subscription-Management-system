@@ -5,9 +5,28 @@ from django.db import transaction
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 
-from apps.accounts.models import Role
+from apps.accounts.models import Customer, Role
 
 User = get_user_model()
+
+
+@transaction.atomic
+def create_customer_account(
+    *, email, password, name, billing_address="", billing_phone="", billing_email=""
+):
+    user = User.objects.create_user(
+        email=email,
+        password=password,
+        role=Role.CUSTOMER,
+    )
+    Customer.objects.create(
+        user=user,
+        name=name,
+        billing_email=billing_email,
+        billing_address=billing_address,
+        billing_phone=billing_phone,
+    )
+    return user
 
 
 @transaction.atomic

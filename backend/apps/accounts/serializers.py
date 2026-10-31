@@ -24,15 +24,54 @@ class RoleTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["customer_id"] = cls.customer_id_for(user)
         return token
 
+    @classmethod
+    def user_data_for(cls, user):
+        return {
+            "id": user.pk,
+            "email": user.email,
+            "role": user.role,
+            "customer_id": cls.customer_id_for(user),
+        }
+
+    @classmethod
+    def token_response_for(cls, user):
+        refresh = cls.get_token(user)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": cls.user_data_for(user),
+        }
+
     def validate(self, attrs):
         data = super().validate(attrs)
-        data["user"] = {
-            "id": self.user.pk,
-            "email": self.user.email,
-            "role": self.user.role,
-            "customer_id": self.customer_id_for(self.user),
-        }
+        data["user"] = self.user_data_for(self.user)
         return data
+
+
+class CustomerRegistrationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    name = serializers.CharField(max_length=255)
+    billing_address = serializers.CharField(required=False, allow_blank=True)
+    billing_phone = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        privileged_fields = {"role", "is_staff", "is_superuser"}
+        supplied = privileged_fields.intersection(self.initial_data)
+        if supplied:
+            raise serializers.ValidationError(
+                {field: "This field is not accepted during customer registration." for field in sorted(supplied)}
+            )
+        return attrs
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

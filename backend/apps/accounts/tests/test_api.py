@@ -154,6 +154,89 @@ def test_jwt_bearer_token_authenticates_protected_profile(api_client, staff_user
 
 
 @pytest.mark.django_db
+def test_public_registration_creates_customer_and_returns_jwt(api_client):
+    response = api_client.post(
+        "/api/auth/register/",
+        {
+            "email": "new-customer@example.com",
+            "password": "CustomerPassword123!",
+            "name": "New Customer",
+            "billing_address": "12 Sample Road",
+            "billing_phone": "+1 555 0100",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    user = User.objects.get(email="new-customer@example.com")
+    customer = Customer.objects.get(user=user)
+    assert user.role == Role.CUSTOMER
+    assert user.is_staff is False
+    assert user.is_superuser is False
+    assert customer.name == "New Customer"
+    assert customer.billing_address == "12 Sample Road"
+    assert customer.billing_phone == "+1 555 0100"
+    assert response.data["user"]["customer_id"] == customer.pk
+    assert response.data["customer"]["id"] == customer.pk
+    assert response.data["customer"]["name"] == "New Customer"
+    assert decode_jwt_claims(response.data["access"])["customer_id"] == customer.pk
+    assert response.data["refresh"]
+
+
+@pytest.mark.django_db
+def test_registration_rejects_weak_password_without_creating_user(api_client):
+    response = api_client.post(
+        "/api/auth/register/",
+        {
+            "email": "weak-password@example.com",
+            "password": "weak",
+            "name": "Weak Password",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "password" in response.data
+    assert not User.objects.filter(email="weak-password@example.com").exists()
+
+
+@pytest.mark.django_db
+def test_registration_rejects_existing_email(api_client, customer_users):
+    user_a, *_ = customer_users
+    response = api_client.post(
+        "/api/auth/register/",
+        {
+            "email": user_a.email,
+            "password": "CustomerPassword123!",
+            "name": "Duplicate",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert User.objects.filter(email=user_a.email).count() == 1
+
+
+@pytest.mark.django_db
+def test_registration_rejects_privileged_role_fields(api_client):
+    response = api_client.post(
+        "/api/auth/register/",
+        {
+            "email": "privilege-attempt@example.com",
+            "password": "CustomerPassword123!",
+            "name": "Privilege Attempt",
+            "role": Role.ADMIN,
+            "is_staff": True,
+            "is_superuser": True,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not User.objects.filter(email="privilege-attempt@example.com").exists()
+
+
+@pytest.mark.django_db
 def test_only_admin_can_create_managed_users(api_client, admin_user, staff_user):
     api_client.force_authenticate(user=staff_user)
     forbidden = api_client.post(
