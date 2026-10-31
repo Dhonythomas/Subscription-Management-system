@@ -58,6 +58,7 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 - Public customer signup that atomically creates a customer account and linked profile
 - Django password validation requiring more than eight characters, uppercase, lowercase, and one special character from the approved set
 - Generic, time-limited, single-use password reset email and confirmation endpoints; delivery failures keep the public response generic, and changing the password invalidates existing access and refresh JWTs
+- SMTP backend, host, port, credentials, and TLS are configurable through environment variables; no mail credentials are committed
 - Admin-only staff creation; staff/customer/unauthenticated callers are denied, and role escalation fields are rejected
 - Authenticated `/me/` profile reads; customers can update only their own billing details
 - Read-only customer list/detail APIs with queryset scoping, 404 on cross-customer ID tampering, and staff/admin visibility

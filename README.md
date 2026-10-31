@@ -67,7 +67,7 @@ Later phases add APIs and business workflows on top of this schema freeze.
 
 Send the access token as `Authorization: Bearer <access-token>` on protected requests. The initial admin can be created with `createsuperuser`; customer accounts can self-register, and only an admin can create staff accounts. Password reset email links point to `PASSWORD_RESET_FRONTEND_URL` (default `http://localhost:5173/reset-password`); configure it to the deployed client route.
 
-Successful password reset invalidates the user's existing access and refresh tokens; they must log in again.
+Successful password reset invalidates the user's existing access and refresh tokens; they must log in again. Configure `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `EMAIL_USE_TLS` in `.env` for reset emails to deliver. Delivery failures keep the API response generic and are logged without the address or reset token.
 
 ## Local development and tests (this machine)
 
