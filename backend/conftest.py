@@ -8,6 +8,7 @@ from apps.catalog.models import Product, Tax
 from apps.plans.models import Plan
 from apps.subscriptions.models import Subscription
 from apps.billing.models import Invoice
+from apps.discounts.models import Discount
 
 
 @pytest.fixture
@@ -80,4 +81,17 @@ def invoice(db, subscription, customer):
         total=Decimal("590.00"),
         due_date=timezone.now().date(),
         status=Invoice.Status.DRAFT,
+    )
+
+
+@pytest.fixture
+def discount(db):
+    return Discount.objects.create(
+        name="Welcome",
+        type=Discount.Type.FIXED,
+        value=Decimal("50.00"),
+        scope=Discount.Scope.SUBSCRIPTION,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date(),
+        usage_limit=10,
     )
