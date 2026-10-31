@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 6 — Payments & Invoice Actions is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, invoice actions, and payments. Phase 7 adds automatic discounts next.
+**Phase 7 — Automatic Discounts is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, and automatic discounts. Phase 8 adds the finance dashboard next.
 
 ## Prerequisites
 
@@ -117,6 +117,10 @@ Celery Beat also schedules `apps.billing.tasks.run_billing_task` daily. Re-runni
 | `GET /api/payments/` | List payments | Admin/staff |
 
 Partial payments are supported. When total payments reach the invoice total, the invoice automatically becomes Paid. Overpayments and payments against draft, paid, or cancelled invoices are rejected.
+
+## Discounts
+
+Discounts are applied automatically when invoices are generated. Fixed and percentage discounts can target the whole subscription or selected products, with start/end dates, minimum amount or quantity, and usage limits. Applied discounts are recorded in `discount_usage`; repeat billing runs cannot exceed the limit.
 
 ## Local development and tests (this machine)
 

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 6 — Payments & Invoice Actions**
+**Phase 7 — Automatic Discounts**
 
 **Status:** Complete
 
@@ -158,4 +158,23 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 138 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-Payment receipt email remains deferred. Phase 7 (discount engine) is next.
+## Phase 7 implementation
+
+- Eligible discounts apply automatically during invoice generation
+- Fixed and percentage discounts for whole subscriptions or selected products
+- Minimum amount and minimum quantity rules
+- Active date-window enforcement
+- Usage limits enforced with row locks and persisted `DiscountUsage`
+- Discounts are allocated to invoice lines and reduce taxable totals
+- Discounted usage survives repeat billing runs without exceeding the limit
+- No schema or migration changes
+
+## Phase 7 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Discount engine tests | `python -m pytest apps/discounts/tests/test_engine.py -q` | 4 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 142 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+Payment receipt email remains deferred. Phase 8 (dashboard and reports) is next.

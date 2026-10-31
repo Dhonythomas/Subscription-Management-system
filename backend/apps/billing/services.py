@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.billing.models import Invoice, InvoiceLine
+from apps.discounts.services import apply_invoice_discounts
 from apps.platform.exceptions import InvalidTransition
 from apps.platform.money import quantize_money
 from apps.platform.services import apply_transition, emit_event
@@ -90,8 +91,8 @@ def generate_invoice_for_subscription(subscription_id, billing_date=None):
         due_date = period_end + timedelta(days=_payment_term_days(subscription.payment_terms))
 
         subtotal = Decimal("0.00")
-        tax_total = Decimal("0.00")
         line_rows = []
+        product_ids = []
         for subscription_line in subscription_lines:
             tax_rate = (
                 subscription_line.tax.rate
@@ -99,9 +100,8 @@ def generate_invoice_for_subscription(subscription_id, billing_date=None):
                 else Decimal("0.00")
             )
             line_amount = quantize_money(subscription_line.amount)
-            line_tax = quantize_money(line_amount * tax_rate / Decimal("100"))
             subtotal += line_amount
-            tax_total += line_tax
+            product_ids.append(subscription_line.product_id)
             line_rows.append(
                 InvoiceLine(
                     description=_invoice_line_description(subscription_line),
@@ -114,7 +114,6 @@ def generate_invoice_for_subscription(subscription_id, billing_date=None):
             )
 
         subtotal = quantize_money(subtotal)
-        tax_total = quantize_money(tax_total)
         invoice = Invoice.objects.create(
             number=f"INV-{subscription.pk}-{period_start:%Y%m%d}",
             subscription=subscription,
@@ -122,14 +121,36 @@ def generate_invoice_for_subscription(subscription_id, billing_date=None):
             period_start=period_start,
             period_end=period_end,
             subtotal=subtotal,
-            tax=tax_total,
+            tax=Decimal("0.00"),
             discount=Decimal("0.00"),
-            total=quantize_money(subtotal + tax_total),
+            total=subtotal,
             due_date=due_date,
         )
         for line in line_rows:
             line.invoice = invoice
         InvoiceLine.objects.bulk_create(line_rows)
+
+        discount_total, applied_discounts = apply_invoice_discounts(
+            invoice=invoice,
+            subscription=subscription,
+            lines=line_rows,
+            product_ids=product_ids,
+            billing_date=period_start,
+        )
+        tax_total = sum(
+            (
+                quantize_money(
+                    (line.amount - line.discount) * line.tax_rate / Decimal("100")
+                )
+                for line in line_rows
+            ),
+            Decimal("0.00"),
+        )
+        tax_total = quantize_money(tax_total)
+        invoice.tax = tax_total
+        invoice.discount = discount_total
+        invoice.total = quantize_money(subtotal - discount_total + tax_total)
+        invoice.save(update_fields=["tax", "discount", "total", "updated_at"])
 
         subscription.next_billing_date = period_end + timedelta(days=1)
         subscription.save(update_fields=["next_billing_date", "updated_at"])
@@ -143,6 +164,8 @@ def generate_invoice_for_subscription(subscription_id, billing_date=None):
                 "number": invoice.number,
                 "subscription_id": subscription.pk,
                 "total": str(invoice.total),
+                "discount": str(invoice.discount),
+                "discount_ids": [discount.pk for discount in applied_discounts],
                 "period_start": period_start.isoformat(),
                 "period_end": period_end.isoformat(),
                 "due_date": due_date.isoformat(),
