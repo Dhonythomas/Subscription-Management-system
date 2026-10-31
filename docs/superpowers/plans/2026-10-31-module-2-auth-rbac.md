@@ -48,11 +48,11 @@
 - Produce `POST /api/auth/login/` and `POST /api/auth/refresh/` returning SimpleJWT access/refresh token responses.
 - Protected endpoints authenticate using `JWTAuthentication`; unauthenticated requests default to denied.
 
-- [ ] Write tests for admin/staff/customer login, custom claims, bad credentials, refresh, and a real bearer-token request to a protected endpoint.
-- [ ] Run those tests and confirm the missing JWT routes/authentication fail.
-- [ ] Add SimpleJWT at the exact pinned version, settings, claim serializer, login/refresh views, and `/api/auth/` routing; remove DB-token auth from the API configuration.
-- [ ] Run the focused tests and confirm all pass.
-- [ ] Commit as `phase-2: add jwt authentication`.
+- [x] Write tests for admin/staff/customer login, custom claims, bad credentials, refresh, and a real bearer-token request to a protected endpoint.
+- [x] Run those tests and confirm the missing JWT routes/authentication fail.
+- [x] Add SimpleJWT at the exact pinned version, settings, claim serializer, login/refresh views, and `/api/auth/` routing; remove DB-token auth from the API configuration.
+- [x] Run the focused tests and confirm all pass.
+- [x] Commit as `phase-2: add jwt authentication`.
 
 ### Task 2: Public customer registration
 
@@ -68,11 +68,11 @@
 - Produce `create_customer_account(*, email, password, name, billing_address="", billing_phone="", billing_email="") -> User`, atomically creating a `Role.CUSTOMER` user and linked `Customer`.
 - Produce `POST /api/auth/register/` with `AllowAny`, returning HTTP 201, access/refresh tokens, and profile data.
 
-- [ ] Write tests for valid registration, customer role and linked record, returned JWT claims, duplicate email, weak password, and attempts to submit role/admin fields.
-- [ ] Run focused tests and confirm registration is absent/fails.
-- [ ] Implement registration through the service and serializer; accept no caller-supplied role or privilege fields.
-- [ ] Run focused tests and confirm all pass.
-- [ ] Commit as `phase-2: add customer registration`.
+- [x] Write tests for valid registration, customer role and linked record, returned JWT claims, duplicate email, weak password, and attempts to submit role/admin fields.
+- [x] Run focused tests and confirm registration is absent/fails.
+- [x] Implement registration through the service and serializer; accept no caller-supplied role or privilege fields.
+- [x] Run focused tests and confirm all pass.
+- [x] Commit as `phase-2: add customer registration`.
 
 ### Task 3: Time-limited, single-use password reset
 
@@ -87,11 +87,11 @@
 - Produce `POST /api/auth/password-reset/` and `POST /api/auth/password-reset-confirm/` using `uidb64`, `token`, and `new_password`.
 - Reset request always returns the same public response; confirmation validates the Django token, password policy, and user. The reset token is single-use; JWT access tokens remain valid until their configured expiry.
 
-- [ ] Write tests for existing/nonexistent emails returning the same response, valid reset, invalid UID/token, expired token, weak password, and replay rejection.
-- [ ] Run focused tests and confirm missing edge cases fail.
-- [ ] Implement reset flow with Django's time-limited `default_token_generator`, generic email behavior, and password-change token invalidation.
-- [ ] Run focused tests and confirm all pass.
-- [ ] Commit as `phase-2: complete password reset flow`.
+- [x] Write tests for existing/nonexistent emails returning the same response, valid reset, invalid UID/token, expired token, weak password, and replay rejection.
+- [x] Run focused tests and confirm missing edge cases fail.
+- [x] Implement reset flow with Django's time-limited `default_token_generator`, generic email behavior, and password-change token invalidation.
+- [x] Run focused tests and confirm all pass.
+- [x] Commit as `phase-2: complete password reset flow`.
 
 ### Task 4: Admin-only staff creation and role permissions
 
@@ -109,11 +109,11 @@
 - Produce role permission classes `IsAdmin`, `IsStaff`, `IsCustomer`, and `IsStaffOrAdmin`; Task 5 adds `IsCustomerOwnerOrStaffAdmin`.
 - No public or customer path can create elevated accounts.
 
-- [ ] Write tests proving admin success, staff/customer/anonymous denial, invalid password rejection, and resistance to role/is_superuser field injection.
-- [ ] Run focused tests and confirm required route/permission cases fail.
-- [ ] Implement the narrow staff endpoint and remove/restrict generic managed-user creation that can create unrelated user roles.
-- [ ] Run focused tests and confirm all pass.
-- [ ] Commit as `phase-2: restrict staff account creation`.
+- [x] Write tests proving admin success, staff/customer/anonymous denial, invalid password rejection, and resistance to role/is_superuser field injection.
+- [x] Run focused tests and confirm required route/permission cases fail.
+- [x] Implement the narrow staff endpoint and remove/restrict generic managed-user creation that can create unrelated user roles.
+- [x] Run focused tests and confirm all pass.
+- [x] Commit as `phase-2: restrict staff account creation`.
 
 ### Task 5: Customer profile and ownership-safe customer reads
 
@@ -130,11 +130,11 @@
 - Produce `CustomerQuerySetMixin` with configurable owner lookup (`user` or `customer__user`) and `IsCustomerOwnerOrStaffAdmin` object permission.
 - Customer list/detail reads are read-only; customer querysets include only the caller's own customer record, while staff/admin can read all.
 
-- [ ] Write tests for customer profile reads/updates, staff/admin update denial, protected-field rejection, own customer detail, cross-customer 404, and staff/admin access to both records.
-- [ ] Add pagination/query-count assertions for customer list queries and run the focused tests.
-- [ ] Implement profile serialization and scoped read-only customer endpoints with explicit permissions and `select_related("user")`.
-- [ ] Run focused tests and confirm all pass.
-- [ ] Commit as `phase-2: add customer profile and isolation`.
+- [x] Write tests for customer profile reads/updates, staff/admin update denial, protected-field rejection, own customer detail, cross-customer 404, and staff/admin access to both records.
+- [x] Add pagination/query-count assertions for customer list queries and run the focused tests.
+- [x] Implement profile serialization and scoped read-only customer endpoints with explicit permissions and `select_related("user")`.
+- [x] Run focused tests and confirm all pass.
+- [x] Commit as `phase-2: add customer profile and isolation`.
 
 ### Task 6: Full Phase 2 verification and handoff
 
@@ -150,9 +150,9 @@
 **Interfaces:**
 - No schema/migration changes. All auth routes, RBAC behavior, and completion evidence are documented accurately.
 
-- [ ] Run Accounts tests, the full pytest suite, `manage.py check`, and `makemigrations --check --dry-run` against PostgreSQL.
-- [ ] Add final proof assertions for unknown-email login, refresh rotation, admin profile-update denial, exact role-permission behavior, malformed/expired/wrong-role bearer tokens, rejection of a special character outside the spec's allowed set, JWT/refresh rejection after password reset, and generic response on email-delivery failure; run Accounts tests.
-- [ ] Run Docker Compose build/up, API tests, and `/health/` verification if Docker Engine is available; otherwise report the exact blocker.
-- [ ] Review `git diff --check`, inspect changes, search for secrets/debug prints/TODOs, and verify no `.env` is committed.
-- [ ] Update `PROGRESS.md` with tested Phase 2 status and known limitations.
-- [ ] Commit as `phase-2: verify auth and rbac` and leave the branch clean.
+- [x] Run Accounts tests, the full pytest suite, `manage.py check`, and `makemigrations --check --dry-run` against PostgreSQL.
+- [x] Add final proof assertions for unknown-email login, refresh rotation, admin profile-update denial, exact role-permission behavior, malformed/expired/wrong-role bearer tokens, rejection of a special character outside the spec's allowed set, JWT/refresh rejection after password reset, and generic response on email-delivery failure; run Accounts tests.
+- [x] Run Docker Compose build/up, API tests, and `/health/` verification if Docker Engine is available; otherwise report the exact blocker.
+- [x] Review `git diff --check`, inspect changes, search for secrets/debug prints/TODOs, and verify no `.env` is committed.
+- [x] Update `PROGRESS.md` with tested Phase 2 status and known limitations.
+- [x] Commit as `phase-2: verify auth and rbac` and leave the branch clean.
