@@ -22,6 +22,7 @@ from apps.accounts.serializers import (
     CustomerProfileUpdateSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    PasswordAwareTokenRefreshSerializer,
     RoleTokenObtainPairSerializer,
     StaffCreateSerializer,
     MeSerializer,
@@ -45,6 +46,7 @@ class RoleTokenObtainPairView(TokenObtainPairView):
 class PublicTokenRefreshView(TokenRefreshView):
     permission_classes = (AllowAny,)
     authentication_classes = ()
+    serializer_class = PasswordAwareTokenRefreshSerializer
 
 
 class CustomerRegistrationView(APIView):

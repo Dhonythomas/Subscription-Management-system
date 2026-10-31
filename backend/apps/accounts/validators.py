@@ -11,7 +11,7 @@ class ComplexPasswordValidator:
             raise ValidationError("Password must contain an uppercase letter.")
         if not re.search(r"[a-z]", password):
             raise ValidationError("Password must contain a lowercase letter.")
-        if not re.search(r"[^A-Za-z0-9]", password):
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             raise ValidationError("Password must contain a special character.")
 
     def get_help_text(self):

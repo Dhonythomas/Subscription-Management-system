@@ -1,6 +1,10 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
 
 from apps.accounts.models import Customer, Role, User
 
@@ -46,6 +50,13 @@ class RoleTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data["user"] = self.user_data_for(self.user)
         return data
+
+
+class PasswordAwareTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        JWTAuthentication().get_user(refresh.access_token)
+        return super().validate(attrs)
 
 
 class CustomerRegistrationSerializer(serializers.Serializer):

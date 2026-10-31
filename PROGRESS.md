@@ -13,7 +13,7 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 ## Verification environment
 
 - Local development and test verification use PostgreSQL 16 running in WSL Ubuntu on `127.0.0.1:5432` (database `subscription_db`, role `subscription`). Tests are run from a Linux virtual environment inside WSL (`/home/thushar/.venvs/subscription`) because the Windows-to-WSL localhost relay is unreliable on this machine.
-- Docker Desktop is not installed on this machine, so `docker compose up` runtime verification is blocked until it is available. The Compose configuration, Dockerfile, `.dockerignore`, and `.env.example` were created and structurally validated with PyYAML.
+- Docker Desktop is installed. Phase 2 Docker Compose build, migrations, API tests, and `/health/` have now been verified in the isolated worktree.
 - No verification is claimed for a command that has not been run.
 
 ## Verification log
@@ -54,16 +54,25 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 
 ## Phase 2 implementation
 
-- Token-based email/password login for admin, staff, and customer roles
-- Django password validation requiring more than eight characters, uppercase, lowercase, and special characters
-- Time-limited, single-use password reset using Django's password reset token generator
-- Explicit permissions for login, reset, profile, managed-user, and customer endpoints
-- Admin-only managed user creation; staff and customer roles cannot create users
-- Customer querysets restricted to the authenticated customer; staff and admin can read all customers
-- Optimized customer querysets with `select_related("user")` and paginated list responses
-- Accounts API tests covering all roles, password policy, admin RBAC, reset-token reuse, and customer isolation
+- SimpleJWT email/password login and refresh for admin, staff, and customer roles; access tokens last 30 minutes and refresh tokens last one day, with role/email/customer ID claims
+- Public customer signup that atomically creates a customer account and linked profile
+- Django password validation requiring more than eight characters, uppercase, lowercase, and one special character from the approved set
+- Generic, time-limited, single-use password reset email and confirmation endpoints; changing the password invalidates existing access and refresh JWTs
+- Admin-only staff creation; staff/customer/unauthenticated callers are denied, and role escalation fields are rejected
+- Authenticated `/me/` profile reads; customers can update only their own billing details
+- Read-only customer list/detail APIs with queryset scoping, 404 on cross-customer ID tampering, and staff/admin visibility
+- Explicit role permissions; paginated, `select_related("user")` customer listing
+- No Phase 1 model or migration changes
 
 ## Phase 2 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Phase 2 full suite (WSL PostgreSQL 16) | `wsl -d Ubuntu -- bash -lc "cd .../phase-2-auth-rbac/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"` | 99 passed |
+| 2026-10-31 | Phase 2 Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+| 2026-10-31 | Phase 2 Docker runtime | `docker compose config`; `docker compose up --build -d`; `docker compose run --rm api pytest -q`; `curl http://localhost:8000/health/` | Build and migrations succeeded; 99 tests passed; health returned HTTP 200 `{"status":"ok"}`; containers healthy |
+
+### Earlier attempts (superseded by the successful verification above)
 
 | Date | Task | Command | Result |
 |---|---|---|---|
@@ -73,4 +82,4 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full regression attempt | `python -m pytest --ds=test_sqlite_settings --nomigrations -q` | 64 passed, 1 baseline PostgreSQL-trigger test failed because SQLite does not enforce the audit trigger |
 | 2026-10-31 | PostgreSQL test suite | `python -m pytest backend/apps/accounts/tests -q` | Blocked: PostgreSQL connection timed out; Docker daemon unavailable |
 
-Phase 3 remains blocked until Phase 2 is verified against PostgreSQL, committed, and recorded as complete.
+Phase 3 (catalog and plans APIs) is next. It should begin after the Phase 2 branch is integrated into the shared base branch.

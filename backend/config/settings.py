@@ -118,6 +118,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
+    "CHECK_REVOKE_TOKEN": True,
 }
 
 PASSWORD_RESET_FRONTEND_URL = os.environ.get(

@@ -9,7 +9,9 @@ from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
+from rest_framework.test import APIRequestFactory
 
+from apps.accounts import permissions
 from apps.accounts.models import Customer, Role, User
 
 
@@ -103,13 +105,18 @@ def test_all_roles_can_log_in(api_client, role):
 def test_invalid_login_is_rejected(api_client, customer_users):
     user_a, *_ = customer_users
 
-    response = api_client.post(
+    wrong_password = api_client.post(
         "/api/auth/login/",
         {"email": user_a.email, "password": "wrong-password"},
         format="json",
     )
+    unknown_email = api_client.post(
+        "/api/auth/login/",
+        {"email": "missing@example.com", "password": "CustomerPassword123!"},
+        format="json",
+    )
 
-    assert response.status_code == 401
+    assert wrong_password.status_code == unknown_email.status_code == 401
 
 
 @pytest.mark.django_db
@@ -144,6 +151,7 @@ def test_refresh_returns_access_token_with_same_role_claim(api_client, staff_use
 
     assert response.status_code == 200
     assert decode_jwt_claims(response.data["access"])["role"] == Role.STAFF
+    assert response.data["refresh"] != login.data["refresh"]
 
 
 @pytest.mark.django_db
@@ -300,7 +308,13 @@ def test_unauthenticated_cannot_create_staff(api_client):
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "password",
-    ["shortA!", "alllowercase1!", "ALLUPPERCASE1!", "NoSpecial123"],
+    [
+        "shortA!",
+        "alllowercase1!",
+        "ALLUPPERCASE1!",
+        "NoSpecial123",
+        "Password_123",
+    ],
 )
 def test_staff_creation_enforces_password_policy(api_client, admin_user, password):
     api_client.force_authenticate(user=admin_user)
@@ -420,8 +434,12 @@ def test_customer_can_update_only_own_billing_profile(api_client, customer_users
 
 
 @pytest.mark.django_db
-def test_non_customer_cannot_patch_customer_profile(api_client, staff_user):
-    api_client.force_authenticate(user=staff_user)
+@pytest.mark.parametrize("role", [Role.ADMIN, Role.STAFF])
+def test_non_customer_cannot_patch_customer_profile(
+    api_client, role, admin_user, staff_user
+):
+    user = admin_user if role == Role.ADMIN else staff_user
+    api_client.force_authenticate(user=user)
 
     response = api_client.patch(
         "/api/accounts/me/", {"billing_address": "Not allowed"}, format="json"
@@ -436,7 +454,9 @@ def test_profile_patch_rejects_privileged_fields(api_client, customer_users):
     authenticate_with_password(api_client, user_a, "CustomerPassword123!")
 
     response = api_client.patch(
-        "/api/accounts/me/", {"role": Role.ADMIN, "is_staff": True}, format="json"
+        "/api/accounts/me/",
+        {"role": Role.ADMIN, "is_staff": True, "is_superuser": True},
+        format="json",
     )
 
     assert response.status_code == 400
@@ -459,9 +479,44 @@ def test_customer_list_has_two_queries_with_related_user_loaded(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("role", [Role.ADMIN, Role.STAFF, Role.CUSTOMER])
+@pytest.mark.parametrize(
+    ("permission_name", "allowed_roles"),
+    [
+        ("IsAdmin", {Role.ADMIN}),
+        ("IsStaff", {Role.STAFF}),
+        ("IsCustomer", {Role.CUSTOMER}),
+        ("IsStaffOrAdmin", {Role.STAFF, Role.ADMIN}),
+    ],
+)
+def test_role_permission_classes_allow_only_expected_roles(
+    role, permission_name, allowed_roles
+):
+    user = User.objects.create_user(
+        email=f"permission-{role}-{permission_name}@example.com",
+        password="ValidPassword123!",
+        role=role,
+    )
+    request = APIRequestFactory().get("/")
+    request.user = user
+    permission_class = getattr(permissions, permission_name)
+
+    assert permission_class().has_permission(request, view=None) == (
+        role in allowed_roles
+    )
+
+
+@pytest.mark.django_db
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 def test_password_reset_token_is_single_use(api_client, customer_users):
     user_a, *_ = customer_users
+    login = api_client.post(
+        "/api/auth/login/",
+        {"email": user_a.email, "password": "CustomerPassword123!"},
+        format="json",
+    )
+    old_access = login.data["access"]
+    old_refresh = login.data["refresh"]
     request_response = api_client.post(
         "/api/auth/password-reset/",
         {"email": user_a.email},
@@ -481,11 +536,19 @@ def test_password_reset_token_is_single_use(api_client, customer_users):
     first_reset = api_client.post(
         "/api/auth/password-reset-confirm/", payload, format="json"
     )
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {old_access}")
+    old_access_response = api_client.get("/api/accounts/me/")
+    api_client.credentials()
+    old_refresh_response = api_client.post(
+        "/api/auth/refresh/", {"refresh": old_refresh}, format="json"
+    )
     second_reset = api_client.post(
         "/api/auth/password-reset-confirm/", payload, format="json"
     )
 
     assert first_reset.status_code == 200
+    assert old_access_response.status_code == 401
+    assert old_refresh_response.status_code == 401
     assert second_reset.status_code == 400
     user_a.refresh_from_db()
     assert user_a.check_password("NewPassword123!")

@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 2 — Auth & RBAC** implementation is complete pending PostgreSQL verification. The repository contains the Phase 1 foundation plus token login, password policy enforcement, password reset, admin-only user management, and customer data isolation APIs.
+**Phase 2 — Auth & RBAC is complete.** The backend provides JWT login/refresh, customer signup, password reset, admin-only staff creation, customer profile updates, and customer data isolation. The full test suite passes against PostgreSQL and inside Docker.
 
 Later phases add APIs and business workflows on top of this schema freeze.
 
@@ -37,21 +37,44 @@ Later phases add APIs and business workflows on top of this schema freeze.
    curl http://localhost:8000/health/
    ```
    Expected response: `{"status": "ok"}`
-4. Run the test suite inside the API container:
+4. Create the initial admin account:
+   ```bash
+   docker compose run --rm api python manage.py createsuperuser
+   ```
+5. Run the test suite inside the API container:
    ```bash
    docker compose run --rm api pytest
    ```
-5. Stop and clean up:
+6. Stop and clean up:
    ```bash
    docker compose down -v
    ```
+
+## Accounts/Auth API
+
+| Method and path | Purpose | Access |
+|---|---|---|
+| `POST /api/auth/register/` | Register a customer and customer profile | Public |
+| `POST /api/auth/login/` | Obtain JWT access and refresh tokens | Public |
+| `POST /api/auth/refresh/` | Refresh an access token | Public, valid refresh token required |
+| `POST /api/auth/password-reset/` | Request a single-use reset link | Public |
+| `POST /api/auth/password-reset-confirm/` | Set a new password using `uidb64` and `token` | Public, valid reset link required |
+| `POST /api/accounts/staff/` | Create a staff account | Admin only |
+| `GET /api/accounts/me/` | Read the signed-in user's profile | Authenticated |
+| `PATCH /api/accounts/me/` | Update customer billing details | Customer only |
+| `GET /api/accounts/customers/` | List customers (customers see only themselves) | Authenticated |
+| `GET /api/accounts/customers/<id>/` | Read a customer (cross-customer IDs return 404) | Authenticated |
+
+Send the access token as `Authorization: Bearer <access-token>` on protected requests. The initial admin can be created with `createsuperuser`; customer accounts can self-register, and only an admin can create staff accounts. Password reset email links point to `PASSWORD_RESET_FRONTEND_URL` (default `http://localhost:5173/reset-password`); configure it to the deployed client route.
+
+Successful password reset invalidates the user's existing access and refresh tokens; they must log in again.
 
 ## Local development and tests (this machine)
 
 PostgreSQL 16 is running in WSL Ubuntu on `127.0.0.1:5432` (database `subscription_db`, user `subscription`). Because the Windows-to-WSL localhost relay can be flaky, tests are run from a Linux virtual environment inside WSL:
 
 ```bash
-wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/Thushar/Documents/vs/makeathon/subscription-management-system/.worktrees/phase-1-foundation/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"
+wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/Thushar/Documents/vs/makeathon/subscription-management-system/backend && /home/thushar/.venvs/subscription/bin/python -m pytest -q"
 ```
 
 From the backend directory with the Windows virtual environment:
@@ -64,7 +87,7 @@ From the backend directory with the Windows virtual environment:
 
 ## Verification notes
 
-- **Docker runtime:** Docker Desktop is not installed on this machine, so `docker compose up` runtime verification was not executed. The Compose file, Dockerfile, `.dockerignore`, and `.env.example` were created and structurally validated with PyYAML. All migrations and tests were verified against PostgreSQL 16 in WSL.
+- **Docker runtime:** `docker compose up --build -d` completed successfully; migrations ran, the API returned HTTP 200 from `/health/`, and `docker compose run --rm api pytest -q` passed the full suite.
 - **No secrets committed:** `.env` is git-ignored; only `.env.example` is tracked.
 - **Money:** All money fields use `DecimalField(max_digits=12, decimal_places=2)` with `apps.platform.money.quantize_money` (ROUND_HALF_UP).
 - **State changes:** Subscription and invoice transitions go through service functions and write `AuditLog` + `OutboxEvent` in the same transaction.
