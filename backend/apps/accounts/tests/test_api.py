@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from django.conf import settings
@@ -317,30 +318,112 @@ def test_staff_can_read_all_customers(api_client, staff_user, customer_users):
 def test_password_reset_token_is_single_use(api_client, customer_users):
     user_a, *_ = customer_users
     request_response = api_client.post(
-        reverse("password-reset"),
+        "/api/auth/password-reset/",
         {"email": user_a.email},
         format="json",
     )
     assert request_response.status_code == 200
     assert len(mail.outbox) == 1
 
-    message = mail.outbox[0].body
-    uid = re.search(r"uid=([^ ]+)", message).group(1)
-    token = re.search(r"token=([^ ]+)", message).group(1)
+    reset_url = re.search(r"https?://\S+", mail.outbox[0].body).group(0)
+    query = parse_qs(urlparse(reset_url).query)
     payload = {
-        "uid": uid,
-        "token": token,
+        "uidb64": query["uidb64"][0],
+        "token": query["token"][0],
         "new_password": "NewPassword123!",
     }
 
     first_reset = api_client.post(
-        reverse("password-reset-confirm"), payload, format="json"
+        "/api/auth/password-reset-confirm/", payload, format="json"
     )
     second_reset = api_client.post(
-        reverse("password-reset-confirm"), payload, format="json"
+        "/api/auth/password-reset-confirm/", payload, format="json"
     )
 
     assert first_reset.status_code == 200
     assert second_reset.status_code == 400
     user_a.refresh_from_db()
     assert user_a.check_password("NewPassword123!")
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_password_reset_request_does_not_reveal_unknown_email(api_client, customer_users):
+    user_a, *_ = customer_users
+    known = api_client.post(
+        "/api/auth/password-reset/", {"email": user_a.email}, format="json"
+    )
+    unknown = api_client.post(
+        "/api/auth/password-reset/",
+        {"email": "missing@example.com"},
+        format="json",
+    )
+
+    assert known.status_code == unknown.status_code == 200
+    assert known.data == unknown.data
+    assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    PASSWORD_RESET_TIMEOUT=-1,
+)
+def test_password_reset_rejects_expired_token(api_client, customer_users):
+    user_a, *_ = customer_users
+    request_response = api_client.post(
+        "/api/auth/password-reset/", {"email": user_a.email}, format="json"
+    )
+    assert request_response.status_code == 200
+    reset_url = re.search(r"https?://\S+", mail.outbox[0].body).group(0)
+    query = parse_qs(urlparse(reset_url).query)
+
+    response = api_client.post(
+        "/api/auth/password-reset-confirm/",
+        {
+            "uidb64": query["uidb64"][0],
+            "token": query["token"][0],
+            "new_password": "NewPassword123!",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["detail"] == "Invalid or expired reset token."
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_password_reset_rejects_weak_new_password(api_client, customer_users):
+    user_a, *_ = customer_users
+    request_response = api_client.post(
+        "/api/auth/password-reset/", {"email": user_a.email}, format="json"
+    )
+    assert request_response.status_code == 200
+    reset_url = re.search(r"https?://\S+", mail.outbox[0].body).group(0)
+    query = parse_qs(urlparse(reset_url).query)
+
+    response = api_client.post(
+        "/api/auth/password-reset-confirm/",
+        {
+            "uidb64": query["uidb64"][0],
+            "token": query["token"][0],
+            "new_password": "weak",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "new_password" in response.data
+
+
+@pytest.mark.django_db
+def test_password_reset_rejects_malformed_uid_and_token(api_client):
+    response = api_client.post(
+        "/api/auth/password-reset-confirm/",
+        {"uidb64": "%%%", "token": "invalid", "new_password": "NewPassword123!"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["detail"] == "Invalid or expired reset token."

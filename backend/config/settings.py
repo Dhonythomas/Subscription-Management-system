@@ -120,6 +120,10 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
 }
 
+PASSWORD_RESET_FRONTEND_URL = os.environ.get(
+    "PASSWORD_RESET_FRONTEND_URL", "http://localhost:5173/reset-password"
+)
+
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL

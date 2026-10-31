@@ -78,7 +78,9 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            user_id = force_str(urlsafe_base64_decode(serializer.validated_data["uid"]))
+            user_id = force_str(
+                urlsafe_base64_decode(serializer.validated_data["uidb64"])
+            )
             user = User.objects.get(pk=user_id, is_active=True)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(

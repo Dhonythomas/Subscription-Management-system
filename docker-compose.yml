@@ -57,6 +57,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
+      PASSWORD_RESET_FRONTEND_URL: ${PASSWORD_RESET_FRONTEND_URL:-http://localhost:5173/reset-password}
     depends_on:
       migrate:
         condition: service_completed_successfully
