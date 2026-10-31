@@ -13,9 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 2 — Auth & RBAC is complete.** The backend provides JWT login/refresh, customer signup, password reset, admin-only staff creation, customer profile updates, and customer data isolation. The full test suite passes against PostgreSQL and inside Docker.
-
-Later phases add APIs and business workflows on top of this schema freeze.
+**Phase 3 — Catalog & Plans is complete.** The backend provides JWT authentication and RBAC, catalog and plan management, customer profiles, and the foundation for subscriptions and billing. Phase 4 adds quotation and subscription workflows next.
 
 ## Prerequisites
 
@@ -68,6 +66,17 @@ Later phases add APIs and business workflows on top of this schema freeze.
 Send the access token as `Authorization: Bearer <access-token>` on protected requests. The initial admin can be created with `createsuperuser`; customer accounts can self-register, and only an admin can create staff accounts. Password reset email links point to `PASSWORD_RESET_FRONTEND_URL` (default `http://localhost:5173/reset-password`); configure it to the deployed client route.
 
 Successful password reset invalidates the user's existing access and refresh tokens; they must log in again. Configure `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `EMAIL_USE_TLS` in `.env` for reset emails to deliver. Delivery failures keep the API response generic and are logged without the address or reset token.
+
+## Catalog & Plans API
+
+| Method and path | Purpose | Access |
+|---|---|---|
+| `/api/catalog/products/` | List, create, read, update, delete products | Admin writes; staff reads |
+| `/api/catalog/variants/` | Manage product variants and price deltas | Admin writes; staff reads |
+| `/api/catalog/taxes/` | Manage tax names and rates | Admin writes; staff reads |
+| `/api/plans/` | List, create, read, update, delete plans | Admin writes; staff reads |
+
+All list endpoints are paginated. Customers cannot access catalog or plan endpoints.
 
 ## Local development and tests (this machine)
 

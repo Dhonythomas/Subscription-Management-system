@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from apps.accounts.models import Role
 
@@ -45,6 +45,17 @@ class IsStaffOrAdmin(BasePermission):
             and request.user.is_authenticated
             and request.user.role in {Role.ADMIN, Role.STAFF}
         )
+
+
+class IsAdminOrStaffReadOnly(BasePermission):
+    message = "Only admin or staff users may view this resource; only admin may change it."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in SAFE_METHODS:
+            return request.user.role in {Role.ADMIN, Role.STAFF}
+        return request.user.role == Role.ADMIN
 
 
 class IsCustomerOwnerOrStaffAdmin(BasePermission):

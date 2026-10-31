@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 2 — Auth, Roles & RBAC**
+**Phase 3 — Catalog, Variants, Taxes & Plans**
 
 **Status:** Complete
 
@@ -83,4 +83,20 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full regression attempt | `python -m pytest --ds=test_sqlite_settings --nomigrations -q` | 64 passed, 1 baseline PostgreSQL-trigger test failed because SQLite does not enforce the audit trigger |
 | 2026-10-31 | PostgreSQL test suite | `python -m pytest backend/apps/accounts/tests -q` | Blocked: PostgreSQL connection timed out; Docker daemon unavailable |
 
-Phase 3 (catalog and plans APIs) is next. It should begin after the Phase 2 branch is integrated into the shared base branch.
+## Phase 3 implementation
+
+- Admin CRUD for products, variants, taxes, and plans
+- Staff read-only access; customer and anonymous access denied
+- Decimal money fields and validation for non-negative prices, tax rates, quantity, and plan dates
+- Paginated list endpoints with `select_related` for variant and plan products
+- No schema or migration changes
+
+## Phase 3 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Phase 3 API tests | `python -m pytest apps/catalog/tests/test_api.py apps/plans/tests/test_api.py -q` | 12 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 115 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+Phase 4 (quotation templates and subscription APIs) is next.
