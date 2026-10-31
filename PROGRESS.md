@@ -2,9 +2,9 @@
 
 ## Current phase
 
-**Phase 1 — Foundation**
+**Phase 2 — Auth, Roles & RBAC**
 
-**Status:** Complete
+**Status:** In Progress (Design Approved)
 
 ## Phase 1 scope decision
 
@@ -31,6 +31,7 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Task 9: invoice state machine | `wsl -d Ubuntu -- bash .../run-tests.sh` | OK (48 tests) |
 | 2026-10-31 | Task 10: payments/discounts/reports schema | `wsl -d Ubuntu -- bash .../run-tests.sh` | OK (52 tests) |
 | 2026-10-31 | Task 11: docker runtime and docs | `python -c "import yaml; yaml.safe_load(open('docker-compose.yml')); print('yaml_ok')"`; `manage.py check`; `manage.py makemigrations --check --dry-run`; `wsl -d Ubuntu -- bash .../run-tests.sh` | OK (52 tests); Docker Compose not executed (not installed) |
+| 2026-10-31 | Phase 2 design: Auth, Roles & RBAC | Subagent builder review + design spec | Approved |
 | 2026-10-31 | Task 12: final verification and handoff | `git diff --check`; `git status --short`; `git log --oneline -6`; `git grep` for TODO/FIXME; no `.env` committed | Working tree clean; 52 tests passed; no missing migrations; Docker not verified |
 
 ## Task 1 notes
