@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 4 — Quotations & Subscription Lifecycle**
+**Phase 5 — Billing Engine & Invoices**
 
 **Status:** Complete
 
@@ -117,4 +117,24 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 123 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-Phase 5 (billing engine and invoices) is next.
+## Phase 5 implementation
+
+- Idempotent invoice generation for active subscriptions due on or before the billing date
+- Per-subscription row lock inside a transaction; the existing unique invoice-period constraint remains intact
+- Invoice lines snapshot product/variant description, quantity, unit price, tax rate, discount, and amount
+- Totals use `Decimal` and the shared money quantizer
+- `next_billing_date` advances in the same transaction that creates the invoice
+- `invoice.created` event written to the outbox in that transaction
+- Celery daily task and `run_billing` management command for scheduled or on-demand runs
+- Double-run test proves a second run creates no duplicate invoices
+- No schema or migration changes
+
+## Phase 5 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Billing engine tests | `python -m pytest apps/billing/tests/test_billing_engine.py -q` | 5 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 128 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+Phase 6 (payments and invoice actions) is next.

@@ -144,4 +144,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.platform.tasks.dispatch_outbox_task",
         "schedule": 10.0,
     },
+    "run-billing": {
+        "task": "apps.billing.tasks.run_billing_task",
+        "schedule": 86400.0,
+    },
 }

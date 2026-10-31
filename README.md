@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 4 — Quotations & Subscriptions is complete.** The backend provides JWT auth and RBAC, catalog and plan management, customer profiles, quotation templates, and the full subscription lifecycle. Phase 5 adds the billing engine next.
+**Phase 5 — Billing Engine is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, and idempotent invoice generation. Phase 6 adds payments and invoice actions next.
 
 ## Prerequisites
 
@@ -93,6 +93,16 @@ All list endpoints are paginated. Customers cannot access catalog or plan endpoi
 | `POST /api/subscriptions/<id>/renew/` | Move Closed → Active | Admin/staff |
 
 Status is read-only; lifecycle changes only happen through the action endpoints and are audited.
+
+## Billing
+
+Run due billing on demand:
+
+```bash
+python manage.py run_billing
+```
+
+Celery Beat also schedules `apps.billing.tasks.run_billing_task` daily. Re-running billing for the same date creates no duplicate invoices; invoice creation and `next_billing_date` advancement are atomic.
 
 ## Local development and tests (this machine)
 
