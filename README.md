@@ -13,7 +13,7 @@ Core flow: **Product > Plan > Quotation > Subscription > Invoice > Payment > Rep
 
 ## Current status
 
-**Phase 7 — Automatic Discounts is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, and automatic discounts. Phase 8 adds the finance dashboard next.
+**Phase 8 — Finance Dashboard is complete.** The backend provides auth and RBAC, catalog and plans, subscriptions, billing, payments, invoice PDFs, discounts, and the finance reporting read model. Phase 9 adds seed data and demo readiness.
 
 ## Prerequisites
 
@@ -117,6 +117,15 @@ Celery Beat also schedules `apps.billing.tasks.run_billing_task` daily. Re-runni
 | `GET /api/payments/` | List payments | Admin/staff |
 
 Partial payments are supported. When total payments reach the invoice total, the invoice automatically becomes Paid. Overpayments and payments against draft, paid, or cancelled invoices are rejected.
+
+## Reports API
+
+| Method and path | Purpose | Access |
+|---|---|---|
+| `GET /api/reports/dashboard/?date=YYYY-MM-DD` | Finance snapshot for a date | Admin/staff |
+| `GET /api/reports/metrics/` | Paginated daily metrics history | Admin/staff |
+
+Refresh metrics with `python manage.py refresh_metrics`; Celery Beat also refreshes them daily. Metrics include active subscriptions, revenue collected, outstanding balance, overdue invoices, MRR, and ARR.
 
 ## Discounts
 

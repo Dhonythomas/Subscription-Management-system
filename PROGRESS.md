@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**Phase 7 — Automatic Discounts**
+**Phase 8 — Finance Dashboard & Reports**
 
 **Status:** Complete
 
@@ -177,4 +177,22 @@ Phase 1 is the full foundation schema plus the platform layer, not platform infr
 | 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 142 passed |
 | 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
 
-Payment receipt email remains deferred. Phase 8 (dashboard and reports) is next.
+## Phase 8 implementation
+
+- Daily finance metrics read model covering active subscriptions, revenue collected, outstanding balance, overdue invoices, MRR, and ARR
+- SQL aggregate queries for invoice balances and payment totals
+- Idempotent `update_or_create` refresh per date
+- Daily Celery task and `refresh_metrics` management command
+- Staff/admin dashboard endpoint and paginated daily metrics API
+- Customers denied access to finance reports
+- No schema or migration changes
+
+## Phase 8 verification
+
+| Date | Task | Command | Result |
+|---|---|---|---|
+| 2026-10-31 | Reports API tests | `python -m pytest apps/reports/tests/test_api.py -q` | 5 passed |
+| 2026-10-31 | Full suite (WSL PostgreSQL 16) | `python -m pytest -q` | 147 passed |
+| 2026-10-31 | Django/migration checks | `manage.py check`; `manage.py makemigrations --check --dry-run` | No issues; no changes detected |
+
+The 10k-subscription performance benchmark was not run. Payment receipt email remains deferred. Phase 9 (seed data, README, demo) is next.

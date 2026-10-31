@@ -148,4 +148,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.billing.tasks.run_billing_task",
         "schedule": 86400.0,
     },
+    "refresh-daily-metrics": {
+        "task": "apps.reports.tasks.refresh_daily_metrics_task",
+        "schedule": 86400.0,
+    },
 }
