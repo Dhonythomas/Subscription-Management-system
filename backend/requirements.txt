@@ -1,0 +1,7 @@
+Django==5.2.18
+djangorestframework==3.16.1
+psycopg[binary]==3.2.13
+celery[redis]==5.5.3
+redis==5.2.1
+pytest==8.4.2
+pytest-django==4.11.1

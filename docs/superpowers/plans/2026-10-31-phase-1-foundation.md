@@ -6,7 +6,7 @@
 
 **Architecture:** Django 5.2 modular monolith under `backend/apps/`, with `platform` owning shared base models, money helpers, audit/outbox services, the outbox dispatcher, and the generic state-transition helper. Phase 1 creates all core models and migrations; later phases add APIs and business services without rewriting the schema.
 
-**Tech Stack:** Python 3.12+ (host 3.13), Django 5.2.18, DRF 3.16.1, psycopg 3.2.13, Celery 5.5.3, Redis client 6.4.0, pytest 8.4.2, pytest-django 4.11.1, PostgreSQL 16, Redis 7, Docker Compose.
+**Tech Stack:** Python 3.12+ (host 3.13), Django 5.2.18, DRF 3.16.1, psycopg 3.2.13, Celery 5.5.3, Redis client 5.2.1, pytest 8.4.2, pytest-django 4.11.1, PostgreSQL 16, Redis 7, Docker Compose.
 
 **Spec:** `docs/superpowers/specs/2026-10-31-phase-1-foundation-design.md`
 
@@ -133,7 +133,7 @@ Django==5.2.18
 djangorestframework==3.16.1
 psycopg[binary]==3.2.13
 celery[redis]==5.5.3
-redis==6.4.0
+redis==5.2.1
 pytest==8.4.2
 pytest-django==4.11.1
 ```
@@ -178,7 +178,7 @@ Create `manage.py` with `DJANGO_SETTINGS_MODULE=config.settings`. Create `config
 
 - `BASE_DIR = Path(__file__).resolve().parent.parent`
 - `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` from environment with the non-secret development defaults documented in `.env.example`
-- PostgreSQL `DATABASES` using `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, defaulting to `subscription_db`, `subscription`, `subscription`, `localhost`, `5432`
+- PostgreSQL `DATABASES` using `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, defaulting to `subscription_db`, `subscription`, `subscription`, `127.0.0.1`, `5432`, with `OPTIONS={"connect_timeout": 5}`
 - `INSTALLED_APPS`: Django admin/auth/contenttypes/sessions/messages/staticfiles, `rest_framework`, `apps.platform.apps.PlatformConfig`
 - `MIDDLEWARE`, `ROOT_URLCONF`, `TEMPLATES`, `WSGI_APPLICATION`, `AUTH_PASSWORD_VALIDATORS` (minimum length 9), `LANGUAGE_CODE="en-us"`, `TIME_ZONE="UTC"`, `USE_TZ=True`, `STATIC_URL`, `DEFAULT_AUTO_FIELD`
 - `REST_FRAMEWORK` with `DEFAULT_PERMISSION_CLASSES = ["rest_framework.permissions.IsAuthenticated"]`, `DEFAULT_PAGINATION_CLASS = "rest_framework.pagination.PageNumberPagination"`, `PAGE_SIZE = 25`
