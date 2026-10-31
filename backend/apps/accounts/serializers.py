@@ -95,6 +95,57 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "date_joined")
 
 
+class CustomerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = (
+            "id",
+            "name",
+            "billing_email",
+            "billing_address",
+            "billing_phone",
+        )
+        read_only_fields = fields
+
+
+class MeSerializer(serializers.ModelSerializer):
+    customer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "email", "role", "customer")
+
+    def get_customer(self, user):
+        if user.role != Role.CUSTOMER:
+            return None
+        customer = Customer.objects.filter(user_id=user.pk).first()
+        if customer is None:
+            return None
+        return CustomerProfileSerializer(customer).data
+
+
+class CustomerProfileUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
+    billing_email = serializers.EmailField(required=False, allow_blank=True)
+    billing_address = serializers.CharField(required=False, allow_blank=True)
+    billing_phone = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        unknown_fields = set(self.initial_data) - set(self.fields)
+        if unknown_fields:
+            raise serializers.ValidationError(
+                {
+                    field: "This field cannot be updated through the profile endpoint."
+                    for field in sorted(unknown_fields)
+                }
+            )
+        if not attrs:
+            raise serializers.ValidationError(
+                "Provide at least one customer billing field to update."
+            )
+        return attrs
+
+
 class StaffCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 

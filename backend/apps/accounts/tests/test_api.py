@@ -19,6 +19,16 @@ def decode_jwt_claims(token):
     return json.loads(base64.urlsafe_b64decode(payload))
 
 
+def authenticate_with_password(api_client, user, password):
+    response = api_client.post(
+        "/api/auth/login/",
+        {"email": user.email, "password": password},
+        format="json",
+    )
+    assert response.status_code == 200
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+
+
 def test_jwt_signing_key_meets_hs256_minimum_length():
     signing_key = settings.SIMPLE_JWT.get("SIGNING_KEY", settings.SECRET_KEY)
     assert len(signing_key.encode("utf-8")) >= 32
@@ -328,27 +338,124 @@ def test_staff_creation_rejects_privileged_field_injection(api_client, admin_use
 @pytest.mark.django_db
 def test_customer_cannot_read_another_customer(api_client, customer_users):
     user_a, _, customer_a, customer_b = customer_users
-    api_client.force_authenticate(user=user_a)
+    authenticate_with_password(api_client, user_a, "CustomerPassword123!")
 
     list_response = api_client.get(reverse("customer-list"))
+    own_detail_response = api_client.get(
+        reverse("customer-detail", args=[customer_a.pk])
+    )
     detail_response = api_client.get(
         reverse("customer-detail", args=[customer_b.pk])
     )
 
     assert list_response.status_code == 200
     assert [item["id"] for item in list_response.data["results"]] == [customer_a.pk]
+    assert own_detail_response.status_code == 200
     assert detail_response.status_code == 404
 
 
 @pytest.mark.django_db
-def test_staff_can_read_all_customers(api_client, staff_user, customer_users):
-    api_client.force_authenticate(user=staff_user)
+@pytest.mark.parametrize("role", [Role.ADMIN, Role.STAFF])
+def test_staff_and_admin_can_read_all_customers(
+    api_client, role, admin_user, staff_user, customer_users
+):
+    user = admin_user if role == Role.ADMIN else staff_user
+    password = "AdminPassword123!" if role == Role.ADMIN else "StaffPassword123!"
+    _, _, customer_a, customer_b = customer_users
+    authenticate_with_password(api_client, user, password)
 
     response = api_client.get(reverse("customer-list"))
+    first_detail = api_client.get(reverse("customer-detail", args=[customer_a.pk]))
+    second_detail = api_client.get(reverse("customer-detail", args=[customer_b.pk]))
 
     assert response.status_code == 200
     assert response.data["count"] == 2
     assert len(response.data["results"]) == 2
+    assert first_detail.status_code == second_detail.status_code == 200
+
+
+@pytest.mark.django_db
+def test_customer_profile_read_includes_billing_details(api_client, customer_users):
+    user_a, _, customer_a, _ = customer_users
+    customer_a.billing_email = "billing@example.com"
+    customer_a.save(update_fields=["billing_email"])
+    authenticate_with_password(api_client, user_a, "CustomerPassword123!")
+
+    response = api_client.get("/api/accounts/me/")
+
+    assert response.status_code == 200
+    assert response.data["email"] == user_a.email
+    assert response.data["role"] == Role.CUSTOMER
+    assert response.data["customer"] == {
+        "id": customer_a.pk,
+        "name": "Customer A",
+        "billing_email": "billing@example.com",
+        "billing_address": "",
+        "billing_phone": "",
+    }
+
+
+@pytest.mark.django_db
+def test_customer_can_update_only_own_billing_profile(api_client, customer_users):
+    user_a, _, customer_a, _ = customer_users
+    authenticate_with_password(api_client, user_a, "CustomerPassword123!")
+
+    response = api_client.patch(
+        "/api/accounts/me/",
+        {
+            "name": "Updated Customer A",
+            "billing_email": "new-billing@example.com",
+            "billing_address": "99 New Road",
+            "billing_phone": "+1 555 0199",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    customer_a.refresh_from_db()
+    assert customer_a.name == "Updated Customer A"
+    assert customer_a.billing_email == "new-billing@example.com"
+    assert customer_a.billing_address == "99 New Road"
+    assert customer_a.billing_phone == "+1 555 0199"
+
+
+@pytest.mark.django_db
+def test_non_customer_cannot_patch_customer_profile(api_client, staff_user):
+    api_client.force_authenticate(user=staff_user)
+
+    response = api_client.patch(
+        "/api/accounts/me/", {"billing_address": "Not allowed"}, format="json"
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_profile_patch_rejects_privileged_fields(api_client, customer_users):
+    user_a, *_ = customer_users
+    authenticate_with_password(api_client, user_a, "CustomerPassword123!")
+
+    response = api_client.patch(
+        "/api/accounts/me/", {"role": Role.ADMIN, "is_staff": True}, format="json"
+    )
+
+    assert response.status_code == 400
+    user_a.refresh_from_db()
+    assert user_a.role == Role.CUSTOMER
+    assert user_a.is_staff is False
+
+
+@pytest.mark.django_db
+def test_customer_list_has_two_queries_with_related_user_loaded(
+    api_client, django_assert_num_queries, customer_users
+):
+    user_a, *_ = customer_users
+    api_client.force_authenticate(user=user_a)
+
+    with django_assert_num_queries(2):
+        response = api_client.get(reverse("customer-list"))
+
+    assert response.status_code == 200
 
 
 @pytest.mark.django_db

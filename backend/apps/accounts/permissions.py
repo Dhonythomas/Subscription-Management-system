@@ -45,3 +45,25 @@ class IsStaffOrAdmin(BasePermission):
             and request.user.is_authenticated
             and request.user.role in {Role.ADMIN, Role.STAFF}
         )
+
+
+class IsCustomerOwnerOrStaffAdmin(BasePermission):
+    message = "You do not have permission to access this customer."
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in {Role.ADMIN, Role.STAFF, Role.CUSTOMER}
+        )
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.role in {Role.ADMIN, Role.STAFF}:
+            return True
+        if request.user.role != Role.CUSTOMER:
+            return False
+        owner = getattr(obj, "user", None)
+        if owner is not None:
+            return owner.pk == request.user.pk
+        customer = getattr(obj, "customer", None)
+        return customer is not None and customer.user_id == request.user.pk

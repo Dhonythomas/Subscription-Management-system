@@ -41,6 +41,14 @@ def create_staff_account(*, email, password):
     )
 
 
+@transaction.atomic
+def update_customer_profile(*, customer, **fields):
+    for field, value in fields.items():
+        setattr(customer, field, value)
+    customer.save(update_fields=[*fields, "updated_at"])
+    return customer
+
+
 def send_password_reset(*, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)

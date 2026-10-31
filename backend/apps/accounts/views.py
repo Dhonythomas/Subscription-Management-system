@@ -6,24 +6,32 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.accounts.models import Customer, Role
-from apps.accounts.permissions import IsAdmin, IsStaffOrAdmin
+from apps.accounts.models import Customer
+from apps.accounts.mixins import CustomerQuerySetMixin
+from apps.accounts.permissions import (
+    IsAdmin,
+    IsCustomer,
+    IsCustomerOwnerOrStaffAdmin,
+)
 from apps.accounts.serializers import (
     CustomerSerializer,
     CustomerRegistrationSerializer,
+    CustomerProfileUpdateSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RoleTokenObtainPairSerializer,
     StaffCreateSerializer,
+    MeSerializer,
     UserSerializer,
 )
 from apps.accounts.services import (
     create_customer_account,
     create_staff_account,
     send_password_reset,
+    update_customer_profile,
 )
 User = get_user_model()
 
@@ -100,10 +108,25 @@ class PasswordResetConfirmView(APIView):
 
 
 class MeView(APIView):
-    permission_classes = (IsAuthenticated,)
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsCustomer()]
+        return [IsAuthenticated()]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(MeSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = CustomerProfileUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        customer = Customer.objects.filter(user=request.user).first()
+        if customer is None:
+            return Response(
+                {"detail": "Customer profile not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        update_customer_profile(customer=customer, **serializer.validated_data)
+        return Response(MeSerializer(request.user).data)
 
 
 class StaffCreateView(APIView):
@@ -116,17 +139,8 @@ class StaffCreateView(APIView):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
-class CustomerViewSet(ModelViewSet):
-    permission_classes = (IsAuthenticated,)
+class CustomerViewSet(CustomerQuerySetMixin, ReadOnlyModelViewSet):
+    permission_classes = (IsCustomerOwnerOrStaffAdmin,)
     serializer_class = CustomerSerializer
-
-    def get_queryset(self):
-        queryset = Customer.objects.select_related("user").order_by("id")
-        if self.request.user.role in {Role.ADMIN, Role.STAFF}:
-            return queryset
-        return queryset.filter(user=self.request.user)
-
-    def get_permissions(self):
-        if self.action in {"list", "retrieve"}:
-            return [IsAuthenticated()]
-        return [IsStaffOrAdmin()]
+    customer_user_lookup = "user"
+    queryset = Customer.objects.select_related("user").order_by("id")
