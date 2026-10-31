@@ -92,7 +92,7 @@ h2 { font-size: 1.03rem; letter-spacing: -0.015em; margin-bottom: 0.2rem; }
 .app-shell { min-height: 100vh; display: flex; }
 .sidebar { width: 250px; flex: 0 0 250px; background: var(--deep); color: #e8f6f2; padding: 24px 18px; display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0; z-index: 20; }
 .sidebar .brand { margin: 2px 8px 34px; }
-.sidebar nav { display: grid; gap: 4px; }
+.sidebar nav { display: grid; gap: 4px; overflow-y: auto; padding-right: 2px; }
 .nav-link { position: relative; display: flex; align-items: center; gap: 11px; color: #a8c7c0; text-decoration: none; font-size: 0.9rem; padding: 11px 12px; border-radius: 9px; transition: 140ms ease; }
 .nav-link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .nav-link.active { background: #13453d; color: #fff; }
@@ -169,6 +169,8 @@ input:focus, select:focus, textarea:focus { border-color: #4aa99c; box-shadow: 0
 .flag-row { display: flex; flex-wrap: wrap; gap: 16px; }
 .check { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: #40504c; }
 .check input { width: auto; }
+select[multiple] { min-height: 116px; }
+.compact-input { width: min(230px, 100%); padding: 8px 10px; font-size: 0.78rem; }
 
 .btn { border: 1px solid transparent; border-radius: 9px; padding: 10px 15px; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: 130ms ease; white-space: nowrap; }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }

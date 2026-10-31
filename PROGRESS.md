@@ -216,8 +216,9 @@ The 10k-subscription performance benchmark was not run. Payment receipt email re
 
 - React 18 + Vite frontend with role-based navigation for admin, staff, and customers
 - Login and public customer registration
-- Finance overview, catalog, plans, subscriptions, invoices, payments, and profile screens
+- Finance overview, reports history, catalog, plans, discounts, quotation templates, customers, subscriptions, invoices, payments, and profile screens
 - Subscription lifecycle actions and invoice PDF downloads wired to the backend
+- Admin-only discount management API and screen
 - Vite proxy for `/api` and `/health`; Docker Compose frontend service on port 5173
 - Responsive layout and customer-scoped screens
 
@@ -225,7 +226,8 @@ The 10k-subscription performance benchmark was not run. Payment receipt email re
 
 | Date | Task | Command | Result |
 |---|---|---|---|
-| 2026-10-31 | Frontend production build | `npm run build` | Built successfully (45 modules) |
+| 2026-10-31 | Frontend production build | `npm run build` | Built successfully (49 modules) |
+| 2026-10-31 | Backend full suite after discounts API | `python -m pytest -q` | 151 passed |
 | 2026-10-31 | Docker frontend runtime | `docker compose up --build -d`; `curl http://localhost:5173/`; `curl http://localhost:5173/health/` | HTTP 200; proxy returned `{"status":"ok"}` |
 | 2026-10-31 | Frontend-to-API login | Admin login through `http://localhost:5173/api/auth/login/`; authenticated dashboard request | Login succeeded; dashboard returned MRR `500.00`, active subscriptions `1` |
 

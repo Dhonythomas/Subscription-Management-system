@@ -3,14 +3,18 @@ import { useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
 import { Loading } from "./components/ui";
 import CatalogPage from "./pages/CatalogPage";
+import CustomersPage from "./pages/CustomersPage";
 import DashboardPage from "./pages/DashboardPage";
+import DiscountsPage from "./pages/DiscountsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import LoginPage from "./pages/LoginPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PlansPage from "./pages/PlansPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
+import ReportsPage from "./pages/ReportsPage";
 import SubscriptionsPage from "./pages/SubscriptionsPage";
+import TemplatesPage from "./pages/TemplatesPage";
 
 function RequireAuth() {
   const { user, loading } = useAuth();
@@ -52,6 +56,38 @@ export default function App() {
           element={
             <RoleGate roles={["admin", "staff"]}>
               <PlansPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="discounts"
+          element={
+            <RoleGate roles={["admin"]}>
+              <DiscountsPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="templates"
+          element={
+            <RoleGate roles={["admin", "staff"]}>
+              <TemplatesPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="customers"
+          element={
+            <RoleGate roles={["admin", "staff"]}>
+              <CustomersPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="reports"
+          element={
+            <RoleGate roles={["admin", "staff"]}>
+              <ReportsPage />
             </RoleGate>
           }
         />

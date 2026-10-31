@@ -160,7 +160,7 @@ Refresh metrics with `python manage.py refresh_metrics`; Celery Beat also refres
 
 ## Discounts
 
-Discounts are applied automatically when invoices are generated. Fixed and percentage discounts can target the whole subscription or selected products, with start/end dates, minimum amount or quantity, and usage limits. Applied discounts are recorded in `discount_usage`; repeat billing runs cannot exceed the limit.
+Discount rules are managed at `/api/discounts/` by admins only. Discounts are applied automatically when invoices are generated. Fixed and percentage discounts can target the whole subscription or selected products, with start/end dates, minimum amount or quantity, and usage limits. Applied discounts are recorded in `discount_usage`; repeat billing runs cannot exceed the limit.
 
 ## Frontend development
 
@@ -176,7 +176,21 @@ Vite serves the app on `http://localhost:5173` and proxies `/api` and `/health` 
 npm run build
 ```
 
-The frontend includes login/registration, role-based navigation, finance overview, catalog and plan views, subscription lifecycle actions, invoices with PDF download, payment recording, and the customer profile screen. Backend RBAC remains authoritative.
+The frontend includes:
+
+- Login and customer registration
+- Admin/staff overview and finance reports history
+- Catalog (products, variants, taxes)
+- Plans
+- Discounts (admin)
+- Quotation templates
+- Customer directory
+- Subscriptions with lifecycle actions
+- Invoices with PDF download
+- Payments
+- Customer profile and billing details
+
+Backend RBAC remains authoritative.
 
 ## Local development and tests (this machine)
 
